@@ -1,0 +1,82 @@
+# Secrets — never commit
+.env
+.env.local
+*.env
+!.env.example
+blimp-infra/secrets/*
+!blimp-infra/secrets/README.md
+!blimp-infra/secrets/.gitkeep
+
+# Local agent state
+.agent-mail/for-duke/*
+.agent-mail/for-cowork/*
+.agent-mail/for-claude-code/*
+.agent-mail/done/*
+.agent-mail/sessions/*
+.agent-mail/scratch/*
+!.agent-mail/*/.gitkeep
+!.agent-mail/README.md
+!.agent-mail/template.md
+
+# Memory + indexes
+.mempalace/
+# .claude: ignore local state, but TRACK the Duke v2 skills + subagent fleet
+.claude/*
+!.claude/skills/
+!.claude/agents/
+# Vendored test deps (tests also run as plain `python3 test_*.py`)
+blimp-infra/a2a/.pytest-deps/
+*.sqlite
+*.db
+
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+blimp-infra/*.log
+blimp-infra/boot-text-blimp.log
+blimp-infra/inspect-blimp.log
+blimp-infra/restart-blimp.log
+blimp-infra/setup-autostart-blimp.log
+blimp-infra/boot-blimp.log
+
+# Build / cache
+# NOTE: do NOT add a bare `build/` here — our DOCS live in /build/ (delivery
+# playbooks). A bare `build/` ignore would untrack the entire docs folder.
+# Ignore compiled artifacts by specific path if any app code lands here later.
+__pycache__/
+*.pyc
+node_modules/
+.next/
+dist/
+*.tar.gz
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# Generated PDFs are committed (they're deliverables); but if you regenerate, no temp files
+pdfs/*.tmp
+
+# MemPalace per-project files (issue #185) — kept for compat; MemPalace replaced by Hindsight (May 2026)
+mempalace.yaml
+entities.json
+
+# Hindsight probe artifacts (regenerable via `curl http://localhost:8888/openapi.json`)
+blimp-infra/postgres/hindsight-openapi.json
+blimp-infra/postgres/*.bak
+
+# Editor / tool backups
+*.bak
+*.bak.*
+
+# Eval RUN artifacts (regenerable; keep evals/cases + the suite, not per-run transcripts)
+evals/results/
+.vercel
+.env*

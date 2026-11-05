@@ -1,0 +1,11 @@
+[Unit]
+Description=Blimp nightly backup (duke_data pg_dump + Hindsight volume + Discord state + auto-memory, mirrored to /mnt/c)
+# Postgres + docker must be up for steps 1-2; backup.sh degrades gracefully
+# (warn + skip) if either is down, so no hard Requires= here.
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bash %h/blimp/repo/blimp-infra/backup.sh
+StandardOutput=append:%h/blimp/backups/backup.log
+StandardError=append:%h/blimp/backups/backup.log

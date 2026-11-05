@@ -1,0 +1,12 @@
+[Unit]
+Description=Duke weekly eval suite, Sunday 04:00 (Asia/Kuala_Lumpur system time)
+
+[Timer]
+OnCalendar=Sun *-*-* 04:00:00
+# The host is a Windows PC that sleeps — if Sunday 04:00 was missed, run the
+# weekly regression on next wake rather than skipping a whole week.
+Persistent=true
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target

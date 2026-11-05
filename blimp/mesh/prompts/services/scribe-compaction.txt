@@ -1,0 +1,4 @@
+Summarize this task session for your future self, who will continue it with no other memory.
+Keep: the objective; every decision made or assumed (with IDs) and why; the exact current state; file paths, commands, IDs and receipt IDs that matter; failed approaches and why they failed; open questions and who owns them; the single next step.
+Drop: raw tool output already captured in receipts, pleasantries, superseded plans, repeated context.
+Output the Ledger JSON schema. Maximum 1,500 tokens. Prefer recall over brevity if in doubt about a detail's importance.

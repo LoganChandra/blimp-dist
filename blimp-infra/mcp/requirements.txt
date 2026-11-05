@@ -1,0 +1,6 @@
+# mcp 2.x renamed FastMCP -> MCPServer and changed the decorator API;
+# blimp_brain_mcp.py targets the 1.x FastMCP surface. A fresh install with an
+# unbounded `>=1.0` resolves to 2.x and the server dies at import with
+# ModuleNotFoundError: No module named 'mcp.server.fastmcp'.
+# Keep the upper bound until blimp_brain_mcp.py is ported. (2026-09-02)
+mcp[cli]>=1.0,<2

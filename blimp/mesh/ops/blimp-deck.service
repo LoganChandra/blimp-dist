@@ -1,0 +1,15 @@
+[Unit]
+Description=Blimp Crew v2 - Deck kernel API (no LLM inside; 127.0.0.1:9100)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/blimp/repo
+Environment=BLIMPG_DSN=postgresql://logan@/duke_data?port=5433
+Environment=DECK_TOKENS_FILE=%h/blimp/secrets/deck-tokens.json
+ExecStart=%h/blimp/mesh-venv/bin/python -m blimp.mesh.deck.api
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

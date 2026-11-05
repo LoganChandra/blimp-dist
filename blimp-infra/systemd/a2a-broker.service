@@ -1,0 +1,25 @@
+[Unit]
+Description=Blimp A2A Broker (agent-to-agent message routing)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment="DUKE_DB_URL=postgresql:///duke_data?host=/var/run/postgresql&port=5433"
+Environment="HERMES_WEBHOOK_URL=http://localhost:8644/webhooks/a2a-task"
+# BROKER_HERMES_SECRET lives in a gitignored env file, NOT in this unit
+# (P0.2: secret was previously committed here). File is created + rotated by
+# blimp-infra/sessions/session-2-security.sh. No "-" prefix: fail loudly if
+# the secret file is missing rather than run with a dead webhook signature.
+EnvironmentFile=%h/blimp/repo/blimp-infra/secrets/a2a-secret.env
+WorkingDirectory=%h/blimp/repo/blimp-infra
+ExecStart=%h/blimp/duke-venv/bin/python a2a/broker.py
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=300
+StartLimitBurst=5
+StandardOutput=append:%h/.hermes/logs/a2a-broker.log
+StandardError=append:%h/.hermes/logs/a2a-broker.log
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,1 @@
+Write the decision record for this huddle. Include: context (why this was decided now), the decision, alternatives considered and why they lost, consequences (good and bad), follow-up tasks, and the dissent verbatim-summarized so its holder agrees with the wording. Cite positions by participant and message ID. If no decision is possible, write an escalation memo instead.

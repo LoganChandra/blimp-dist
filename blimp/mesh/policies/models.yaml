@@ -1,0 +1,30 @@
+# policies/models.yaml — model routing (spec §7.6). Model IDs live here, never in prompts.
+# R4: changes require the Boss. [VERIFY] model IDs and prices before use.
+tiers:
+  T1: { primary: "anthropic/claude-opus-5.5", fallback: "openrouter/frontier-alt" }
+  T2: { primary: "anthropic/claude-sonnet-4-6", fallback: "openrouter/workhorse-alt" }
+  T3: { primary: "z-ai/glm-5.3-flash", fallback: "anthropic/claude-haiku-4-5" }
+routing:
+  hermes.design: T1        # was T3 in v1 — the source of F2 (fabricated claims)
+  hermes.plan: T1
+  hermes.review: T1
+  hermes.chat: T3
+  duke.build: T2
+  duke.debug_hard: T1      # after 2 failed attempts on the same check (L-004)
+  frank.ops: T2
+  frank.brief: T3
+  svc.verifier: T1         # prefer a different vendor family than the task author
+  svc.reader: T3
+  svc.scribe: T3
+  svc.tooltester: T2
+thinking_budget_tokens:    # extended/interleaved thinking where supported
+  design: 16000
+  plan: 12000
+  debug_hard: 12000
+  verify: 8000
+  build: 4000
+  chat: 0
+diversity_rule: >
+  The verifier SHOULD use a different model family from the task author to reduce
+  correlated errors. If none is available, same family with fresh context and a
+  different prompt.

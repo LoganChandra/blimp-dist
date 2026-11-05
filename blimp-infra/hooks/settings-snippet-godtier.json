@@ -1,0 +1,17 @@
+{
+  "_comment": "God-tier upgrade #3 — Stop-hook verification gate (DRAFT, UNINSTALLED). This is the 'hooks' block to add to ~/.claude/settings.json (the shared user-level settings both Frank and Duke read on this machine). CRITICAL: this ADDS one Stop hook — it must be APPENDED to the existing Stop array, NOT replace it. That array already holds Frank's discord-reply-guard.py; keep it. Do NOT hand-merge by pasting over the array — use the idempotent Python appender in STAGED-INSTALL-godtier.md, which backs up settings.json first and no-ops if already present. All gating lives inside the script (HOOK_DISABLE=1 kill-switch + AGENT_CHANNEL/NANOOK_CHANNEL/DUKE_CHANNEL=discord channel gate), so headless runs are never touched and no extra env wiring is needed — Frank's boot already exports NANOOK_CHANNEL=discord and Duke's exports DUKE_CHANNEL=discord. Timeout is in seconds.",
+  "_after_install": "Restart the agent so the hook loads: frank-down && frank-up (Frank) / duke-down && duke-up (Duke).",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/user/blimp/repo/blimp-infra/hooks/stop-verify-guard.sh",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

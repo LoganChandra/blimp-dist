@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Turbo — Duke + Hermes Voice</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0b0b0e;
+      --surface: #151518;
+      --surface-hover: #1c1c20;
+      --border: #25252a;
+      --text: #f0f0f2;
+      --text-dim: #88889a;
+      --radius: 10px;
+      --duke: #3b82f6;
+      --duke-glow: rgba(59,130,246,0.35);
+      --hermes: #a855f7;
+      --hermes-glow: rgba(168,85,247,0.35);
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #eab308;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 520px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--duke), var(--hermes));
+      opacity: 0.6;
+    }
+    h1 {
+      font-size: 1.3rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    h1 span.duke-text { color: var(--duke); }
+    h1 span.sep { color: var(--text-dim); padding: 0 0.25rem; }
+    h1 span.hermes-text { color: var(--hermes); }
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .mode-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--duke), var(--hermes));
+      color: white;
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      font-size: 0.8125rem;
+      color: var(--text-dim);
+    }
+    .status-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--text-dim);
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .status-dot.connected { background: var(--green); box-shadow: 0 0 8px rgba(34,197,94,0.5); }
+    .status-dot.speaking { background: var(--yellow); box-shadow: 0 0 8px rgba(234,179,8,0.5); }
+    .status-dot.error { background: var(--red); box-shadow: 0 0 8px rgba(239,68,68,0.5); }
+    .visualizer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      height: 32px;
+      margin: 0.25rem 0 1rem;
+    }
+    .visualizer .bar {
+      width: 4px;
+      height: 100%;
+      background: linear-gradient(180deg, var(--duke), var(--hermes));
+      border-radius: 2px;
+      transition: height 0.06s ease;
+      opacity: 0.15;
+    }
+    .visualizer.active .bar { opacity: 0.5; }
+    .agents {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+    .agent {
+      flex: 1;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.75rem 0.5rem 0.6rem;
+      transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
+    }
+    .agent-duke { border-color: rgba(59,130,246,0.15); }
+    .agent-hermes { border-color: rgba(168,85,247,0.15); }
+    .agent.active-duke {
+      border-color: var(--duke);
+      box-shadow: 0 0 12px var(--duke-glow);
+    }
+    .agent.active-hermes {
+      border-color: var(--hermes);
+      box-shadow: 0 0 12px var(--hermes-glow);
+    }
+    .agent-name {
+      font-weight: 600;
+      font-size: 0.9375rem;
+      margin-bottom: 0.2rem;
+    }
+    .agent-duke .agent-name { color: var(--duke); }
+    .agent-hermes .agent-name { color: var(--hermes); }
+    .agent-role {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      margin-bottom: 0.5rem;
+    }
+    .agent-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      font-size: 0.7rem;
+    }
+    .agent-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--text-dim);
+      transition: all 0.25s;
+    }
+    .agent-dot.listening { background: var(--green); }
+    .agent-dot.speaking {
+      animation: pulse 0.8s ease-in-out infinite;
+    }
+    .agent-duke .agent-dot.speaking { background: var(--duke); box-shadow: 0 0 8px var(--duke-glow); }
+    .agent-hermes .agent-dot.speaking { background: var(--hermes); box-shadow: 0 0 8px var(--hermes-glow); }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.4); opacity: 0.6; }
+    }
+    .agent-label { color: var(--text-dim); }
+    .agent-label.speaking { color: inherit; font-weight: 500; }
+    .agent-duke .agent-label.speaking { color: var(--duke); }
+    .agent-hermes .agent-label.speaking { color: var(--hermes); }
+    .controls {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      margin-bottom: 0.75rem;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.65rem 1.25rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-primary { background: var(--text); color: var(--bg); }
+    .btn-primary:hover:not(:disabled) { background: #dddde0; }
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-secondary:hover:not(:disabled) { background: #35353a; }
+    .btn-danger { background: var(--red); color: white; }
+    .btn-danger:hover:not(:disabled) { background: #dc2626; }
+    .persona-toggle {
+      display: flex;
+      gap: 0.4rem;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+    .persona-btn {
+      padding: 0.4rem 1rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .persona-btn.active-duke { border-color: var(--duke); color: var(--duke); background: rgba(59,130,246,0.08); }
+    .persona-btn.active-hermes { border-color: var(--hermes); color: var(--hermes); background: rgba(168,85,247,0.08); }
+    .persona-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .room-info {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      margin-top: 0.5rem;
+    }
+    .room-info code {
+      background: rgba(255,255,255,0.04);
+      padding: 0.1em 0.3em;
+      border-radius: 3px;
+      font-family: 'SF Mono', 'Consolas', monospace;
+    }
+    .latency-badge {
+      display: inline-block;
+      background: rgba(34,197,94,0.1);
+      color: var(--green);
+      font-size: 0.6rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 10px;
+      margin-top: 0.25rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>
+      <span class="duke-text">Duke</span>
+      <span class="sep">+</span>
+      <span class="hermes-text">Hermes</span>
+    </h1>
+    <p class="subtitle">
+      <span class="mode-badge">Turbo</span>
+      &nbsp;OpenAI Realtime Voice
+    </p>
+
+    <div class="status-bar">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Initialising…</span>
+    </div>
+
+    <div class="visualizer" id="visualizer">
+      <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+      <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+      <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+      <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+    </div>
+
+    <div class="persona-toggle">
+      <button class="persona-btn active-duke" id="dukePersonaBtn" disabled>⚡ Duke</button>
+      <button class="persona-btn" id="hermesPersonaBtn" disabled>🌀 Hermes</button>
+    </div>
+
+    <div class="agents">
+      <div class="agent agent-duke" id="dukeCard">
+        <div class="agent-name">Duke</div>
+        <div class="agent-role">Implementation Lead</div>
+        <div class="agent-indicator">
+          <span class="agent-dot" id="dukeDot"></span>
+          <span class="agent-label" id="dukeLabel">Idle</span>
+        </div>
+      </div>
+      <div class="agent agent-hermes" id="hermesCard">
+        <div class="agent-name">Hermes</div>
+        <div class="agent-role">Technical Lead</div>
+        <div class="agent-indicator">
+          <span class="agent-dot" id="hermesDot"></span>
+          <span class="agent-label" id="hermesLabel">Idle</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn btn-primary" id="connectBtn">🎙️ Connect</button>
+      <button class="btn btn-danger" id="disconnectBtn" disabled>⏹ Disconnect</button>
+    </div>
+
+    <div class="room-info" id="roomInfo" style="display:none;">
+      <span class="latency-badge">⚡ ~300ms native audio</span>
+      &middot; Session: <code id="sessionId">—</code>
+      &middot; Voice: <code id="voiceId">—</code>
+    </div>
+  </div>
+
+<script>
+(function() {
+  'use strict';
+
+  // DOM refs
+  const statusDot = document.getElementById('statusDot');
+  const statusText = document.getElementById('statusText');
+  const connectBtn = document.getElementById('connectBtn');
+  const disconnectBtn = document.getElementById('disconnectBtn');
+  const visualizer = document.getElementById('visualizer');
+  const roomInfo = document.getElementById('roomInfo');
+  const sessionIdEl = document.getElementById('sessionId');
+  const voiceIdEl = document.getElementById('voiceId');
+  const dukeDot = document.getElementById('dukeDot');
+  const dukeLabel = document.getElementById('dukeLabel');
+  const hermesDot = document.getElementById('hermesDot');
+  const hermesLabel = document.getElementById('hermesLabel');
+  const dukeCard = document.getElementById('dukeCard');
+  const hermesCard = document.getElementById('hermesCard');
+  const dukePersonaBtn = document.getElementById('dukePersonaBtn');
+  const hermesPersonaBtn = document.getElementById('hermesPersonaBtn');
+  const bars = visualizer.querySelectorAll('.bar');
+
+  // State
+  let pc = null;
+  let dc = null;
+  let localStream = null;
+  let audioAnalyser = null;
+  let animFrame = null;
+  let currentPersona = 'duke';
+  let currentSessionId = null;
+  let isConnected = false;
+  let audioEl = null;
+  let toolCallQueue = [];
+  let processingTool = false;
+
+  // OpenAI Realtime WebRTC endpoint
+  const EPHEMERAL_URL = '/realtime/session';
+  const TOOL_URL = '/realtime/tool';
+  const REALTIME_URL = 'https://api.openai.com/v1/realtime';
+
+  // Visualiser
+  function startVisualiser(stream) {
+    if (!stream) return;
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const source = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 32;
+      source.connect(analyser);
+      audioAnalyser = analyser;
+      visualizer.classList.add('active');
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      function draw() {
+        analyser.getByteFrequencyData(data);
+        const len = Math.min(bars.length, data.length);
+        for (let i = 0; i < len; i++) {
+          const pct = data[i] / 255;
+          bars[i].style.height = Math.max(6, pct * 32) + 'px';
+        }
+        animFrame = requestAnimationFrame(draw);
+      }
+      draw();
+    } catch (e) {
+      console.warn('[Turbo] Visualiser init failed:', e);
+    }
+  }
+  function stopVisualiser() {
+    visualizer.classList.remove('active');
+    if (animFrame) cancelAnimationFrame(animFrame);
+    animFrame = null;
+    bars.forEach(b => b.style.height = '32px');
+  }
+
+  // Persona UI
+  function setActivePersona(persona) {
+    currentPersona = persona;
+    dukeCard.className = 'agent agent-duke' + (persona === 'duke' ? ' active-duke' : '');
+    hermesCard.className = 'agent agent-hermes' + (persona === 'hermes' ? ' active-hermes' : '');
+    dukePersonaBtn.className = 'persona-btn' + (persona === 'duke' ? ' active-duke' : '');
+    hermesPersonaBtn.className = 'persona-btn' + (persona === 'hermes' ? ' active-hermes' : '');
+  }
+
+  function setAgentSpeaking(agent, speaking) {
+    const dot = agent === 'duke' ? dukeDot : hermesDot;
+    const label = agent === 'duke' ? dukeLabel : hermesLabel;
+    dot.className = 'agent-dot';
+    label.className = 'agent-label';
+    if (speaking) {
+      dot.classList.add('speaking');
+      label.textContent = 'Speaking';
+      label.classList.add('speaking');
+    } else {
+      dot.classList.add('listening');
+      label.textContent = 'Listening';
+    }
+  }
+
+  function resetAgentIndicators() {
+    setAgentSpeaking('duke', false);
+    setAgentSpeaking('hermes', false);
+  }
+
+  function setStatus(text, state) {
+    statusText.textContent = text;
+    statusDot.className = 'status-dot';
+    if (state) statusDot.classList.add(state);
+  }
+
+  function setButtons(connecting, connected) {
+    isConnected = connected;
+    connectBtn.disabled = connecting || connected;
+    connectBtn.textContent = connected ? '✅ Connected' : '🎙️ Connect';
+    disconnectBtn.disabled = !connected;
+    dukePersonaBtn.disabled = !connected;
+    hermesPersonaBtn.disabled = !connected;
+  }
+
+  // Handle OpenAI Realtime data channel events
+  async function handleDataChannelEvent(event) {
+    const msg = JSON.parse(event.data);
+    console.log('[Turbo] DC event:', msg.type);
+
+    switch (msg.type) {
+      case 'session.created':
+        console.log('[Turbo] Session created:', msg.session.id);
+        break;
+
+      case 'conversation.item.created':
+        // Item added to conversation
+        break;
+
+      case 'response.audio_transcript.delta':
+        // Real-time transcript of what the model is saying
+        break;
+
+      case 'response.audio.delta':
+        // Audio chunk is being received - mark current persona as speaking
+        // Only set if we haven't already
+        if (statusDot.className.indexOf('speaking') === -1) {
+          setStatus('Speaking', 'speaking');
+          setAgentSpeaking(currentPersona, true);
+        }
+        break;
+
+      case 'response.audio.done':
+        // Agent finished speaking
+        setStatus('Listening', 'connected');
+        setAgentSpeaking(currentPersona, false);
+        break;
+
+      case 'response.done':
+        setStatus('Listening', 'connected');
+        setAgentSpeaking(currentPersona, false);
+        break;
+
+      case 'error':
+        console.error('[Turbo] Realtime API error:', msg.error);
+        setStatus('Error: ' + (msg.error.message || 'unknown'), 'error');
+        break;
+
+      case 'response.function_call_arguments.done':
+        // Model wants to call a tool
+        console.log('[Turbo] Function call:', msg.name, msg.arguments);
+        setStatus('Using tools...', 'connected');
+        try {
+          const args = JSON.parse(msg.arguments);
+          const toolResp = await fetch(TOOL_URL, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name: msg.name, arguments: args}),
+          });
+          const toolResult = await toolResp.json();
+
+          // Send result back to OpenAI
+          if (dc && dc.readyState === 'open') {
+            dc.send(JSON.stringify({
+              type: 'conversation.item.create',
+              item: {
+                type: 'function_call_output',
+                call_id: msg.call_id,
+                output: JSON.stringify(toolResult),
+              },
+            }));
+            // Trigger response
+            dc.send(JSON.stringify({type: 'response.create'}));
+          }
+        } catch (e) {
+          console.error('[Turbo] Tool call failed:', e);
+          if (dc && dc.readyState === 'open') {
+            dc.send(JSON.stringify({
+              type: 'conversation.item.create',
+              item: {
+                type: 'function_call_output',
+                call_id: msg.call_id,
+                output: JSON.stringify({error: e.message}),
+              },
+            }));
+            dc.send(JSON.stringify({type: 'response.create'}));
+          }
+        }
+        setStatus('Connected', 'connected');
+        break;
+
+      case 'input_audio_buffer.speech_started':
+        // User started speaking
+        setStatus('You speaking...', 'speaking');
+        resetAgentIndicators();
+        break;
+
+      case 'input_audio_buffer.speech_stopped':
+        // User stopped speaking - waiting for response
+        setStatus('Thinking...', 'connected');
+        break;
+
+      case 'rate_limits.updated':
+        // Rate limit info - ignore
+        break;
+
+      default:
+        console.log('[Turbo] Unhandled event:', msg.type);
+    }
+  }
+
+  // OpenAI Realtime WebRTC connection
+  async function doConnect() {
+    setStatus('Creating session...');
+    setButtons(true, false);
+    resetAgentIndicators();
+
+    try {
+      // Step 1: Get ephemeral token from relay server
+      const sessionResp = await fetch(EPHEMERAL_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          persona: currentPersona,
+          voice: 'alloy',
+        }),
+      });
+      if (!sessionResp.ok) {
+        const err = await sessionResp.json().catch(() => ({}));
+        throw new Error(err.detail || 'Session creation failed: ' + sessionResp.status);
+      }
+      const sessionData = await sessionResp.json();
+      const ephemeralToken = sessionData.ephemeral_token;
+      currentSessionId = sessionData.session_id;
+
+      sessionIdEl.textContent = currentSessionId.slice(-8);
+      voiceIdEl.textContent = sessionData.voice || 'alloy';
+      roomInfo.style.display = 'block';
+
+      if (!ephemeralToken) {
+        throw new Error('No ephemeral token returned');
+      }
+
+      setStatus('Connecting WebRTC...');
+
+      // Step 2: Create RTCPeerConnection
+      pc = new RTCPeerConnection();
+
+      // Handle incoming audio track from OpenAI
+      pc.addEventListener('track', (e) => {
+        console.log('[Turbo] Remote track:', e.track.kind);
+        if (e.track.kind === 'audio') {
+          // Create audio element for playback
+          if (audioEl) {
+            audioEl.remove();
+          }
+          audioEl = document.createElement('audio');
+          audioEl.autoplay = true;
+          audioEl.setAttribute('playsinline', '');
+          audioEl.style.display = 'none';
+          audioEl.srcObject = e.streams[0];
+          document.body.appendChild(audioEl);
+
+          // Handle autoplay policy
+          audioEl.play().then(() => {
+            console.log('[Turbo] Audio playback started');
+          }).catch(() => {
+            console.warn('[Turbo] Audio autoplay blocked - needs user interaction');
+          });
+        }
+      });
+
+      // Set up data channel for events
+      dc = pc.createDataChannel('oai-events');
+      dc.addEventListener('open', () => {
+        console.log('[Turbo] Data channel open');
+      });
+      dc.addEventListener('message', handleDataChannelEvent);
+      dc.addEventListener('error', (e) => {
+        console.error('[Turbo] Data channel error:', e);
+      });
+
+      // Get local mic audio
+      setStatus('Requesting mic...');
+      localStream = await navigator.mediaDevices.getUserMedia({audio: true});
+
+      // Add mic track to peer connection
+      localStream.getTracks().forEach(track => {
+        pc.addTrack(track, localStream);
+      });
+
+      // Start visualiser
+      startVisualiser(localStream);
+
+      // Step 3: Create and send SDP offer
+      setStatus('Negotiating...');
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      // Step 4: Send offer to OpenAI Realtime API
+      const sdpResp = await fetch(REALTIME_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + ephemeralToken,
+          'Content-Type': 'application/sdp',
+        },
+        body: offer.sdp,
+      });
+
+      if (!sdpResp.ok) {
+        const errText = await sdpResp.text().catch(() => sdpResp.statusText);
+        throw new Error('SDP negotiation failed: ' + errText);
+      }
+
+      const answerSdp = await sdpResp.text();
+
+      // Step 5: Set remote description
+      const answer = {
+        type: 'answer',
+        sdp: answerSdp,
+      };
+      await pc.setRemoteDescription(answer);
+
+      setStatus('Connected', 'connected');
+      setButtons(false, true);
+      setActivePersona(currentPersona);
+      setAgentSpeaking(currentPersona, false);
+
+      console.log('[Turbo] WebRTC connected to OpenAI Realtime');
+
+    } catch (err) {
+      console.error('[Turbo] Connection error:', err);
+      setStatus('Error: ' + err.message, 'error');
+      setButtons(false, false);
+      doDisconnect();
+    }
+  }
+
+  async function doDisconnect() {
+    // Close data channel
+    if (dc) {
+      try { dc.close(); } catch (e) {}
+      dc = null;
+    }
+    // Close peer connection
+    if (pc) {
+      try { pc.close(); } catch (e) {}
+      pc = null;
+    }
+    // Stop local mic
+    if (localStream) {
+      localStream.getTracks().forEach(t => t.stop());
+      localStream = null;
+    }
+    // Remove audio element
+    if (audioEl) {
+      audioEl.remove();
+      audioEl = null;
+    }
+    stopVisualiser();
+    resetAgentIndicators();
+    setStatus('Disconnected');
+    setButtons(false, false);
+    roomInfo.style.display = 'none';
+    currentSessionId = null;
+    console.log('[Turbo] Disconnected');
+  }
+
+  // Persona switching
+  async function switchPersona(persona) {
+    if (!isConnected || persona === currentPersona) return;
+    if (!dc || dc.readyState !== 'open') return;
+
+    try {
+      // Call the switch_persona tool to get the new instructions
+      const resp = await fetch(TOOL_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          name: 'switch_persona',
+          arguments: {persona: persona},
+        }),
+      });
+      const data = await resp.json();
+      const newInstructions = data.instructions || '';
+
+      // Send session.update to OpenAI to change instructions
+      dc.send(JSON.stringify({
+        type: 'session.update',
+        session: {
+          instructions: newInstructions,
+        },
+      }));
+
+      // Also send a system message to establish the new persona
+      dc.send(JSON.stringify({
+        type: 'conversation.item.create',
+        item: {
+          type: 'message',
+          role: 'system',
+          content: [{
+            type: 'input_text',
+            text: '[Persona changed to ' + persona + '] ' + newInstructions.slice(0, 100),
+          }],
+        },
+      }));
+
+      setActivePersona(persona);
+      console.log('[Turbo] Switched persona to', persona);
+
+      // Log the switch
+      fetch(TOOL_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          name: 'log_message',
+          arguments: {
+            message: 'Voice session persona switched to ' + persona,
+            channel: 'hermes',
+          },
+        }),
+      }).catch(() => {});
+
+    } catch (e) {
+      console.error('[Turbo] Persona switch failed:', e);
+    }
+  }
+
+  // Init
+  async function init() {
+    try {
+      const resp = await fetch('/healthz');
+      if (resp.ok) {
+        const data = await resp.json();
+        console.log('[Turbo] Relay server ok:', data);
+        setStatus('Ready', 'connected');
+        connectBtn.disabled = false;
+      } else {
+        setStatus('Relay unreachable', 'error');
+      }
+    } catch {
+      setStatus('Relay unreachable', 'error');
+    }
+  }
+
+  // Event listeners
+  connectBtn.addEventListener('click', doConnect);
+  disconnectBtn.addEventListener('click', doDisconnect);
+  dukePersonaBtn.addEventListener('click', () => switchPersona('duke'));
+  hermesPersonaBtn.addEventListener('click', () => switchPersona('hermes'));
+
+  // Handle page unload
+  window.addEventListener('beforeunload', () => {
+    if (isConnected) doDisconnect();
+  });
+
+  init();
+})();
+</script>
+</body>
+</html>

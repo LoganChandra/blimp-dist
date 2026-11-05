@@ -1,0 +1,13 @@
+[Unit]
+Description=Duke overnight shift at 00:30 (Asia/Kuala_Lumpur system time)
+
+[Timer]
+OnCalendar=*-*-* 00:30:00
+# The host is a Windows PC that sleeps — if 00:30 was missed, run on next wake
+# instead of skipping the shift. The overnight-ok demand gate keeps a late run
+# cheap (empty queue -> silent exit).
+Persistent=true
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target

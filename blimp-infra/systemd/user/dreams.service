@@ -1,0 +1,12 @@
+[Unit]
+Description=Duke Dreams — nightly reflective + anticipatory pass (duke-v2 P1.1, demand-gated)
+# Hindsight (Docker) + duke_data postgres should be up; dreams.sh degrades
+# gracefully (warn + skip a pass) if either is down, so no hard Requires= here.
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/blimp/repo/blimp-infra/dreams
+ExecStart=/usr/bin/bash %h/blimp/repo/blimp-infra/dreams/dreams.sh
+StandardOutput=append:%h/blimp/logs/dreams.log
+StandardError=append:%h/blimp/logs/dreams.log

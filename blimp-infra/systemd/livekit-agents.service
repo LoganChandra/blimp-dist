@@ -1,0 +1,17 @@
+[Unit]
+Description=LiveKit Agents Voice Worker (Blimp Voice — Duke)
+After=livekit-server.service livekit-token-server.service
+Requires=livekit-server.service
+
+[Service]
+Type=simple
+EnvironmentFile=/opt/blimp/voice/.env
+WorkingDirectory=/opt/blimp/voice
+ExecStart=/opt/blimp/voice/venv/bin/python agent.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/opt/blimp/voice/logs/agents.log
+StandardError=append:/opt/blimp/voice/logs/agents.log
+
+[Install]
+WantedBy=multi-user.target

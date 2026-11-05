@@ -1,0 +1,8 @@
+{
+  "session_id": "sess-prompt",
+  "transcript_path": "/tmp/duke-hook-scratch/transcripts/with-log.jsonl",
+  "cwd": "/tmp/duke-hook-scratch",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "what did we decide on pricing for the SG prospect?"
+}

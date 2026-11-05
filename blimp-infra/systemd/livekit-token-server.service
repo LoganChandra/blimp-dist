@@ -1,0 +1,17 @@
+[Unit]
+Description=LiveKit Token Server + Mic UI (Blimp Voice)
+After=livekit-server.service
+Requires=livekit-server.service
+
+[Service]
+Type=simple
+EnvironmentFile=/opt/blimp/voice/.env
+WorkingDirectory=/opt/blimp/voice
+ExecStart=/opt/blimp/voice/venv/bin/uvicorn token_server:app --host 127.0.0.1 --port 8790
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/opt/blimp/voice/logs/token-server.log
+StandardError=append:/opt/blimp/voice/logs/token-server.log
+
+[Install]
+WantedBy=multi-user.target

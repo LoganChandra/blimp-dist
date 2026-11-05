@@ -1,0 +1,8 @@
+{"type":"user","uuid":"u-100","timestamp":"2026-06-10T09:00:00Z","message":{"role":"user","content":[{"type":"text","text":"morning duke"}]}}
+{"type":"assistant","uuid":"a-100","message":{"role":"assistant","content":[{"type":"text","text":"Morning the Boss."}]}}
+{"type":"user","uuid":"u-101","timestamp":"2026-06-10T10:00:00Z","message":{"role":"user","content":[{"type":"text","text":"status on the prospect list?"}]}}
+{"type":"assistant","uuid":"a-101","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_001","name":"mcp__blimp-brain__recall","input":{"query":"prospect list status"}}]}}
+{"type":"user","uuid":"u-102","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_001","content":[{"type":"text","text":"3 memories found"}]}]}}
+{"type":"assistant","uuid":"a-102","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_002","name":"mcp__blimp-brain__log_message","input":{"channel":"duke","speaker":"duke","message":"the Boss asked for prospect-list status; reported CRM at 0 rows, P0.1 starts today."}}]}}
+{"type":"user","uuid":"u-103","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_002","content":[{"type":"text","text":"logged"}]}]}}
+{"type":"assistant","uuid":"a-103","message":{"role":"assistant","content":[{"type":"text","text":"CRM still at 0 prospects; P0.1 starts today."}]}}

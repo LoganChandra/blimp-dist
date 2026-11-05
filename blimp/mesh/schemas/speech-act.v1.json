@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://blimp.my/schemas/speech-act.v1.json",
+  "type": "object",
+  "required": ["act", "from", "to", "expects", "priority", "purpose"],
+  "properties": {
+    "act": { "enum": ["REQUEST","QUERY","ANSWER","PROPOSE","ACCEPT","COUNTER","REJECT","PUSHBACK","HANDOFF","STATUS","DONE","ALERT","INFORM","ESCALATE"] },
+    "from": { "type": "string" },
+    "to": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "cc": { "type": "array", "items": { "type": "string" } },
+    "expects": { "enum": ["none","answer","decision","accept","ack"] },
+    "reply_by": { "type": "string", "format": "date-time" },
+    "priority": { "enum": ["P0","P1","P2","P3"] },
+    "visibility": { "enum": ["thread","hq","private"], "default": "thread" },
+    "purpose": { "type": "string", "maxLength": 160 },
+    "in_reply_to": { "type": "string" },
+    "decision_refs": { "type": "array", "items": { "type": "string", "pattern": "^D-\\d{3,}$" } },
+    "artifact_refs": { "type": "array", "items": { "type": "string", "pattern": "^AR-\\d{4,}$" } },
+    "receipt_refs": { "type": "array", "items": { "type": "string", "pattern": "^RC-\\d{4,}$" } },
+    "pushback_round": { "type": "integer", "minimum": 1, "maximum": 2 }
+  },
+  "allOf": [
+    { "if": { "properties": { "expects": { "not": { "const": "none" } } } }, "then": { "required": ["reply_by"] } }
+  ]
+}

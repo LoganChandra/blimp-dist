@@ -1,0 +1,39 @@
+{
+  "_comment": "Duke v2 P1.2 — merge the 'hooks' key below into ~/.claude/settings.json (or this repo's .claude/settings.json). Rail #8: the Boss types this at his terminal, session 3. All three scripts self-gate on DUKE_CHANNEL=discord (exported by boot-text-blimp.sh inside the duke tmux session), so headless Dreams/eval runs are never wedged. Paths use the canonical /home/user/blimp/repo symlink. Stop and UserPromptSubmit take no matcher (always fire); PreToolUse matches the Bash tool only. Timeouts are in seconds.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/user/blimp/repo/blimp-infra/hooks/stop-log-guard.sh",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/user/blimp/repo/blimp-infra/hooks/pretooluse-prod-guard.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/user/blimp/repo/blimp-infra/hooks/promptsubmit-context.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

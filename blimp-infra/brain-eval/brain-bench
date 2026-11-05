@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# brain-bench — one command any of the three agents (Duke/Hermes/Frank) runs to
+# measure the shared brain against a public memory benchmark.
+#
+#   brain-bench fetch                         # download the datasets (once)
+#   brain-bench run --suite locomo --per-category 3
+#   brain-bench run --suite longmemeval --variant oracle --max 30
+#   brain-bench report <results.json>         # render an HTML scorecard
+#
+# Uses the team venv if present, else python3. Never touches the live `duke`
+# bank (the harness only creates/deletes banks prefixed `bench_`).
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+H="$HERE/harness"
+PY="/home/user/blimp/duke-venv/bin/python"
+[ -x "$PY" ] || PY="python3"
+
+cmd="${1:-}"; shift || true
+case "$cmd" in
+  fetch)   bash "$H/fetch_datasets.sh" ;;
+  run)     "$PY" "$H/run_bench.py" "$@" ;;
+  report)  "$PY" "$H/report.py" "$@" ;;
+  *) echo "usage: brain-bench {fetch|run|report} [args]"; exit 1 ;;
+esac

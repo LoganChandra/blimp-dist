@@ -1,0 +1,12 @@
+[Unit]
+Description=Nightly Blimp backup at 03:00 (Asia/Kuala_Lumpur system time)
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+# The host is a Windows PC that sleeps — if 03:00 was missed, run on next wake
+# instead of silently skipping the night (P0.2: backups must actually happen).
+Persistent=true
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target

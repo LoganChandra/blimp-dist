@@ -1,0 +1,11 @@
+# blimp/mesh runtime (pinned minimums verified 2026-09-30). Install into ~/blimp/mesh-venv:
+#   python3 -m venv ~/blimp/mesh-venv && ~/blimp/mesh-venv/bin/pip install -r blimp/mesh/requirements.txt
+psycopg[binary]>=3.2
+fastapi>=0.115
+uvicorn>=0.30
+jsonschema>=4.23
+pyyaml>=6.0
+mcp>=1.9,<2   # FastMCP v1 API, same as the brain MCP (duke-venv)
+# tests
+pytest>=8.3
+httpx>=0.27

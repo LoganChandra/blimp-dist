@@ -1,0 +1,28 @@
+# ── livekit.yaml — LiveKit SFU server configuration ──────────────────────────
+#
+# Installed at /opt/blimp/voice/livekit.yaml on the SG VM.
+# Ports: 7880 (WebRTC/TCP), 7882 (WebRTC/UDP), UDP 50000-60000 for media.
+#
+# Reference: https://docs.livekit.io/server/configuration/
+
+port: 7880
+rtc:
+  port_range_start: 50000
+  port_range_end: 60000
+  # TURN is built into the LiveKit SFU — no separate TURN server needed.
+  use_external_ip: true
+
+keys:
+  # Generate a keypair with: livekit-server generate-keys
+  # Then set matching LIVEKIT_API_KEY and LIVEKIT_API_SECRET in .env.
+  # Example (REPLACE THESE):
+  #   "APIXxxxxxxxxxxxx": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+  "devkey": "devsecret"
+
+logging:
+  level: info
+
+redis:
+  # Required for LiveKit's shared state between server and agent workers.
+  address: localhost:6379
+  db: 0

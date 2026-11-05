@@ -1,0 +1,25 @@
+# Blimp Voice — never commit secrets, venv, caches, or runtime logs.
+# (The whole voice/ dir is currently untracked; this guards against a
+#  blanket `git add blimp-infra/voice` leaking live API keys.)
+
+# Live secrets — keep .env.example tracked, never the filled .env
+.env
+
+# Python virtualenv (multi-hundred-MB, machine-specific)
+venv/
+.venv/
+
+# Byte-compiled / caches
+__pycache__/
+*.py[cod]
+
+# Runtime logs
+logs/
+*.log
+
+# Local debug scratch (kept on disk, not part of the committed build)
+test_cartesia_stream.py
+test_cartesia_ws.py
+
+# Generated test fixture (browser test fake-mic input)
+test_speech.wav

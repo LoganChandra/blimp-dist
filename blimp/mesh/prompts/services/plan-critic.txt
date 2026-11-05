@@ -1,0 +1,4 @@
+Critique this plan against the contract. Score each 0–2 and explain in one line:
+completeness (all deliverables covered) · testability (checks runnable, expected values concrete) · dependency order · reversibility (rollback exists and is realistic) · blast radius (what else could break) · budget realism · decision alignment (no silent contradiction of active decisions).
+Verdict: approve if total ≥ 11 and no zero on testability or reversibility; otherwise revise with at most 5 concrete points.
+Output: {scores: {...}, verdict, points: []}.

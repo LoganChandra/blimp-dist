@@ -1,0 +1,4 @@
+Build next week's plan.
+Inputs: mandates (verbatim), objectives with metrics, the board (READY/BLOCKED/WORKING), last week's outcomes and KPIs, each agent's capacity (tokens and WIP), incidents, risks, and the Boss's pinned items.
+Rules: fit within 85% of capacity; every task traces to an objective or mandate; at least 60% of capacity goes to revenue-linked work unless the Boss says otherwise; put dependencies in order; name the next two tasks per agent; flag anything needing the Boss and batch it.
+Output: WeeklyPlan JSON (top_objectives, tasks_to_create[], tasks_to_reprioritize[], risks[], decisions_needed[], capacity_check) plus a ≤ 10-line Discord summary.

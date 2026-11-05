@@ -1,0 +1,13 @@
+[Unit]
+Description=Duke Dreams nightly pass at 03:30 (Asia/Kuala_Lumpur system time)
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+# The host is a Windows PC that sleeps — if 03:30 was missed, run on next wake
+# instead of silently skipping the night (the dreams demand gate keeps a late
+# run cheap on a quiet day).
+Persistent=true
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target

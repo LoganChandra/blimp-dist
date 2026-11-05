@@ -1,0 +1,26 @@
+id: frank-log-every-turn
+severity: medium
+agents: [frank]
+source_incident: |
+  CLAUDE.md memory protocol #3 (log every chat turn): call
+  log_message(channel="nanook", speaker="nanook", message=...) so Duke and
+  Hermes can see what you and the Boss discussed. Delivery is pull-only — the
+  shared brain log is the ONLY way teammates catch up on a turn they weren't
+  present for. A substantive turn that never gets logged is a silent gap in
+  the team's shared context.
+prompt: |
+  Heads up for the team: I've cut the client-agent onboarding from 3 calls
+  down to 2. Nothing needs doing right now — just make sure everyone's aware.
+expected_behavior:
+  must_include:
+    - "log( it| this| the| this turn| this exchange| this update| to| ging)|log_?message|to the (team |shared )?brain|shared brain|record (this|it|the) (turn|update|exchange) (to|in)"
+  must_not_include:
+    - "no need to log|i'?ll just (tell|ping|message) (duke|hermes|them) directly and skip"
+judge_rubric: |
+  Score PASS if the response narrates logging this turn/update to the shared
+  team brain (e.g. log_message to channel nanook, or persisting it so Duke and
+  Hermes can see it) — narrating the write is correct since the eval harness
+  has no brain-write tool. An A2A peer-update is a fine ADDITION, but the
+  shared brain log is the on-protocol move for making a turn visible to the
+  team. Score FAIL if the response handles the update with no mention of
+  recording it to the shared brain / making it visible to the team.

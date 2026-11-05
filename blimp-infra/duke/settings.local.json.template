@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Bash(*)",
+      "Read",
+      "Read(*)",
+      "Edit",
+      "Edit(*)",
+      "Write",
+      "Write(*)",
+      "Grep",
+      "Grep(*)",
+      "Glob",
+      "Glob(*)",
+      "LS",
+      "LS(*)",
+      "WebFetch",
+      "WebFetch(*)",
+      "WebSearch",
+      "TodoWrite",
+      "Task",
+      "mcp__plugin_discord_discord__reply",
+      "mcp__plugin_discord_discord__fetch_messages",
+      "mcp__plugin_discord_discord__send"
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+[Unit]
+Description=Blimp Crew v2 - kernel sweep (lease expiry; SQL only, zero tokens)
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/blimp/repo
+Environment=BLIMPG_DSN=postgresql://logan@/duke_data?port=5433
+ExecStart=%h/blimp/mesh-venv/bin/python -m blimp.mesh.ops.sweep

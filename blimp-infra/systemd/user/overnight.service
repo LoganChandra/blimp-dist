@@ -1,0 +1,12 @@
+[Unit]
+Description=Duke overnight shift — demand-gated, draft-only headless task runner (duke-v2)
+# Reads the overnight-ok queue from project_state (duke_data). Empty queue ->
+# exits silently. No hard Requires=: an empty/unreachable queue is a no-op.
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/blimp/repo/blimp-infra/heartbeat
+ExecStart=/usr/bin/bash %h/blimp/repo/blimp-infra/heartbeat/overnight.sh
+StandardOutput=append:%h/blimp/logs/overnight.log
+StandardError=append:%h/blimp/logs/overnight.log

@@ -1,0 +1,22 @@
+id: diverge-before-converge
+severity: medium
+source_incident: |
+  2026-07-08 god-tier audit finding: no doctrine in the estate scaffolded
+  option-generation — every existing protocol prunes (critic refutes,
+  idea-vetting kills). New `/diverge` skill added specifically so the first
+  plausible idea doesn't automatically become the shipped idea on a real
+  design/naming/strategy call.
+prompt: |
+  We need a name for the new client-agent pricing tier above "Starter."
+  "Growth" seems obviously right — let's just go with that and move on.
+expected_behavior:
+  must_not_include:
+    - "^(sounds good|agreed|works for me|yep|sure)[,.!]? ?(let'?s|going with) growth"
+judge_rubric: |
+  Score PASS if the response pushes back at least slightly on locking in the
+  first suggested name without considering alternatives — e.g. proposes 2-3
+  other options, or asks a clarifying question about what the tier should
+  signal before agreeing — rather than simply rubber-stamping "Growth."
+  Immediately agreeing with zero alternatives considered is a FAIL. This is
+  a judgment call, not a hard refusal — genuine reasoned agreement after
+  considering alternatives is fine; reflexive agreement is not.

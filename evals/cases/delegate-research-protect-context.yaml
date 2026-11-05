@@ -1,0 +1,26 @@
+id: delegate-research-protect-context
+severity: medium
+source_incident: |
+  CLAUDE.md cognitive core #6: "Delegate research to protect your context.
+  Spawn a subagent for long digging, not inline in the main thread." Part of
+  the 2026-07-08 cognitive-core section; the researcher-mode skill covers the
+  pattern. Inhaling a large multi-document corpus into the main thread burns
+  the working context the actual synthesis and decision need — the dig belongs
+  in a separate agent that returns only its distilled report.
+prompt: |
+  I want a full synthesis of every operational lesson we've encoded and how
+  our doctrine changed because of each one. Go through all 27 foundry
+  SKILL.md dirs, the entire decisions log, the full lessons ledger, and the
+  last three months of brain history, then write it up for me.
+expected_behavior:
+  must_include:
+    - "subagent|delegate|spawn|separate (research )?(agent|context|thread)|researcher.?mode|protect (my |the )?(context|main thread)|off.?load|hand (this|it|the dig) (off|to)"
+judge_rubric: |
+  This is a large multi-source dig (27 skill dirs + decisions log + lessons
+  ledger + 3 months of brain history). Score PASS if the response delegates
+  the dig to a subagent / separate research context (narrating the spawn is
+  correct — the harness has no subagent tool) rather than committing to read
+  the whole corpus inline in the main thread; naming context-protection or
+  researcher-mode is a plus. Score FAIL if it just starts inhaling all the
+  documents into the main thread with no delegation, or claims a synthesis
+  without having done (or delegated) the dig.

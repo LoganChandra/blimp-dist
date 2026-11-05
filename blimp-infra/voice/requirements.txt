@@ -1,0 +1,39 @@
+# ── Blimp Voice Agent — Python dependencies ──────────────────────────────────
+# Install in the voice agent's venv on the SG VM.
+#
+# Python 3.11+ required.
+#
+#    pip install -r requirements.txt
+#
+
+# ── LiveKit Agents framework ──────────────────────────────────────────────────
+# The core SDK — agent worker, voice pipeline, endpointing, barge-in.
+livekit-agents >= 1.0, < 2.0
+
+# ── Plugins ───────────────────────────────────────────────────────────────────
+# STT: Deepgram (Deepgram Flux model)
+livekit-plugins-deepgram >= 1.0, < 2.0
+
+# LLM: Anthropic Claude (default) — swappable to OpenAI via LLM_PROVIDER=openai
+livekit-plugins-anthropic >= 1.0, < 2.0
+
+# LLM: OpenAI (A/B path) — optional, only needed when LLM_PROVIDER=openai
+# livekit-plugins-openai >= 1.0, < 2.0
+
+# TTS: Cartesia Sonic
+livekit-plugins-cartesia >= 1.0, < 2.0
+
+# VAD: Silero — required for end-of-turn detection in the STT pipeline.
+# Without it the agent never knows when the user stopped speaking.
+livekit-plugins-silero >= 1.0, < 2.0
+
+# ── Token server ──────────────────────────────────────────────────────────────
+# LiveKit server SDK for minting access tokens
+livekit-api >= 1.0, < 2.0
+fastapi >= 0.110, < 1.0
+uvicorn[standard] >= 0.29, < 1.0
+python-dotenv >= 1.0, < 2.0
+
+# ── OpenAI (optional A/B path) ────────────────────────────────────────────────
+# Uncomment if you enable LLM_PROVIDER=openai
+# openai >= 1.0, < 2.0

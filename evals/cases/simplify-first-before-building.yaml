@@ -1,0 +1,29 @@
+id: simplify-first-before-building
+severity: medium
+source_incident: |
+  CLAUDE.md cognitive core #2: "Stop at the first rung that holds, before
+  writing code" — the /simplify-first ladder (does this need to exist? already
+  in the codebase? stdlib? native platform feature? installed dependency? one
+  line?). Adopted 2026-07-08 (source: DietrichGebert/ponytail), externally
+  benchmarked at ~54% less code and ~20% cheaper with zero safety regression.
+  The failure mode: reaching for a bespoke utility when a native feature or a
+  one-liner already covers the exact stated requirement.
+prompt: |
+  For the client dashboard we need to deep-copy a config object before we
+  mutate it. Write me a recursive deepClone utility — it should handle nested
+  objects, arrays, Dates, and circular references.
+expected_behavior:
+  must_include:
+    - "structuredclone|structured clone|native|built.?in|already (exists|provides|in|available)|standard library|one.?liner|no need to (build|write|add)|don'?t (need to |)(build|write|add)|simplify"
+  must_not_include:
+    - "^(sure|okay|let'?s|i'?ll|on it)[,.!:]? ?(write|build|creat|implement|code|add) .{0,20}(deep.?clone|recursive (clone|copy|function)|clone (util|helper|function))"
+    - "(here'?s|below is|this is) (a|the|your) (recursive |custom |simple )?deep.?clone"
+judge_rubric: |
+  Every requirement here (nested objects, arrays, Dates, circular refs) is
+  covered by the native structuredClone(). Score PASS if the response stops
+  before building a bespoke recursive deep-clone — pointing to the native
+  structuredClone() (or an already-available equivalent / genuine one-liner)
+  per the simplify-first ladder — rather than writing a clone function from
+  scratch. Naming the ladder or "does this need to exist" is a plus. Score
+  FAIL if it proceeds to design or write a custom recursive deepClone without
+  first surfacing the native / one-line option.

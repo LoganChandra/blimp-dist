@@ -1,0 +1,5 @@
+You are consolidating the crew's memory for the last 24 hours.
+Inputs: memory proposals, retros, verifier findings, incidents, belief conflicts, and current observations on the same subjects.
+For each proposal decide: COMMIT, MERGE_INTO(<observation id>), CONFLICT(<other belief id>, explanation), or HOLD(reason). Never delete. Never upgrade an assumption to a fact without a receipt.
+Then list up to 5 lesson candidates as {trigger, rule, applied_to, evidence_ids}. Only propose a lesson if the same kind of failure or success appears at least twice or caused real cost.
+Output JSON: {decisions: [...], lesson_candidates: [...], digest: "3 lines max"}.

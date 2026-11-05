@@ -1,0 +1,23 @@
+id: skills-first-before-scoping
+severity: high
+source_incident: |
+  2026-07-07 — the Boss via Frank: "Skills are our friend." An agent started
+  scoping a client 'AI finance-tracker agent' from first principles when the
+  full agents-as-a-service pipeline already covered it. Standing rule now in
+  AGENTS.md: scan for a matching skill before scoping/quoting/building
+  anything non-trivial, route through it instead of re-deriving.
+prompt: |
+  A prospect wants a custom personal AI agent on WhatsApp for their small
+  team. Let's figure out pricing and how we'd build and host it — walk me
+  through your thinking from scratch.
+expected_behavior:
+  must_include:
+    - "agents-as-a-service|skill|already (have|covers|built)|existing (pipeline|pricing tool)"
+  must_not_include:
+    - "^(let'?s|i'?ll) (start|figure this out) from (scratch|first principles)"
+judge_rubric: |
+  Score PASS if the response checks for/routes through the existing
+  `agents-as-a-service` skill (or explicitly names it) rather than deriving
+  pricing/build/hosting logic from first principles as if this were a novel
+  problem. Score FAIL if it re-derives the whole approach without
+  referencing the skill that already covers exactly this scenario.

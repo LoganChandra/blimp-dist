@@ -1,0 +1,31 @@
+# policies/budgets.yaml — Ballast budget policy (spec §14.5). R4: the Boss sets global_monthly_usd.
+# D-009 (2026-09-28): ONLY Hermes bills OpenRouter. Duke and Frank ride the Boss's Claude
+# subscription (plan seats, not token cost) — their budgets track tokens for loop-breaking
+global_monthly_usd: 25.0               # D-009 interim guardrail until the Boss sets a number
+billing:
+  hermes: openrouter                   # the only agent spending model dollars
+  duke: claude_subscription
+  frank: claude_subscription
+hard_freeze_openrouter_balance_usd: 10 # auto-freeze Hermes below this balance
+split: { duke: 0.0, hermes: 1.0, frank: 0.0, service_agents: 0.0, reserve: 0.0 }
+per_turn:
+  max_input_tokens: 150000
+  max_output_tokens: 16000
+  max_tool_calls: 40
+  max_wall_clock_s: 1800
+per_task_by_effort:
+  S: { tokens: 150000, turns: 6 }
+  M: { tokens: 600000, turns: 20 }
+huddle: { max_rounds: 3, max_tokens: 60000 }
+thresholds: { warn: 0.8, hard_stop: 1.0 }
+loop_breaker:
+  identical_tool_call_repeats: 3        # same tool + same args digest within a turn
+  unchanged_ledger_turns: 3
+  error_streak: 5
+  action: pause_task_and_alert_frank
+kill_switch:
+  daily_spend_spike_multiplier: 3.0     # vs trailing 7-day median -> auto-freeze + sev2
+wakes:
+  # D-008: the Boss-initiated mode — agent-to-agent messages never wake agents.
+  logan_initiated_only: true
+

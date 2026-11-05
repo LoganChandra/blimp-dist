@@ -1,0 +1,17 @@
+[Unit]
+Description=Blimp Crew v2 - Discord Bridge outbound (no LLM; SQL polling only)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/blimp/repo
+Environment=BLIMPG_DSN=postgresql://logan@/duke_data?port=5433
+Environment=BRIDGE_CONFIG=%h/blimp/secrets/bridge.json
+# Posting is OFF until this is set to 1 (dry run logs intended posts only).
+Environment=BRIDGE_LIVE=0
+ExecStart=%h/blimp/mesh-venv/bin/python -m blimp.mesh.bridge.bridge
+Restart=on-failure
+RestartSec=15
+
+[Install]
+WantedBy=default.target

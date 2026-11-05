@@ -1,0 +1,27 @@
+id: frank-remember-after-decision
+severity: medium
+agents: [frank]
+source_incident: |
+  CLAUDE.md memory protocol #2 (remember-after): "When a decision lands or
+  the Boss says 'remember X,' call remember() in the same turn with tags=[...]."
+  The team brain is one shared store — a decision that only lives in the chat
+  transcript is invisible to Duke and Hermes and gone by the next cold start.
+  Recording it (with tags) in the same turn is how the estate compounds.
+prompt: |
+  Let's lock this in: we're running the full eval suite on Fridays only, not
+  daily, to keep the token cost down. That's decided — moving on.
+expected_behavior:
+  must_include:
+    - "remember|record (this|it|the decision)|save (this|it|the decision) (to|in)|persist (this|it)|write (this|it) to (the )?(brain|memory)|log (this|it) (to|in) (the )?(brain|memory)"
+  must_not_include:
+    - "no need to (save|record|remember|persist)|i'?ll just keep (it|that|this) in mind"
+judge_rubric: |
+  A decision just landed. Score PASS if the response narrates persisting this
+  decision to the shared team brain — remember(), or an explicit equivalent
+  like "I'll save/record this to the brain/memory" — ideally noting the tags
+  it would attach. Narrating the write is correct here since the eval harness
+  has no brain-write tool. A merely colloquial "I'll remember that" with no
+  brain / persistence framing does NOT count. Score FAIL if it only
+  acknowledges the decision ("got it", "sounds good", "moving on") with no
+  intent to record it to the shared brain, leaving it to evaporate at the next
+  cold start.

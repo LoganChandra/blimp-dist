@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://blimp.my/schemas/verification.v1.json",
+  "type": "object",
+  "required": ["task_id","verdict","checks","findings","verifier_model"],
+  "properties": {
+    "task_id": {"type":"string"},
+    "verdict": {"enum":["PASS","FAIL"]},
+    "reason": {"enum":["ALL_CHECKS_PASSED","CHECK_FAILED","UNVERIFIABLE","SCOPE_VIOLATION","SECRET_OR_PII","MISSING_RECEIPTS","OTHER"]},
+    "checks": {"type":"array","items":{"type":"object","required":["check_id","own_receipt","result"],"properties":{"check_id":{"type":"string"},"own_receipt":{"type":"string"},"result":{"enum":["pass","fail","unverifiable"]},"note":{"type":"string"}}}},
+    "findings": {"type":"array","items":{"type":"object","required":["severity","text"],"properties":{"severity":{"enum":["blocker","major","minor"]},"text":{"type":"string"},"receipt":{"type":"string"}}}},
+    "verifier_model": {"type":"string"}
+  }
+}

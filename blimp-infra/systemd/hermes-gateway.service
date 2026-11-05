@@ -1,0 +1,24 @@
+[Unit]
+Description=Hermes Agent Gateway (Blimp Technical Lead)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+# All API keys + Discord token + channel allowlist live here
+EnvironmentFile=%h/.hermes/.env
+# Run gateway directly via the venv binary (avoids PATH issues)
+ExecStart=%h/.hermes/hermes-agent/venv/bin/hermes gateway run
+# Auto-restart on crash. 5s gives Discord time to release the previous session.
+Restart=on-failure
+RestartSec=5
+# Don't go into restart-loop infinity if something's truly broken
+StartLimitIntervalSec=300
+StartLimitBurst=5
+# Logs land at ~/.hermes/logs/gateway.log
+StandardOutput=append:%h/.hermes/logs/gateway.log
+StandardError=append:%h/.hermes/logs/gateway.log
+
+[Install]
+WantedBy=default.target

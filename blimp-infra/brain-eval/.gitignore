@@ -1,0 +1,6 @@
+# Downloaded benchmark datasets (fetch with harness/fetch_datasets.sh) and run
+# artifacts — regenerable, not source.
+harness/data/
+results/
+harness/__pycache__/
+__pycache__/

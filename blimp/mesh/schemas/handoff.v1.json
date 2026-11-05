@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://blimp.my/schemas/handoff.v1.json",
+  "type": "object",
+  "required": ["task_id","from","to","objective","definition_of_done","state_summary","decisions","open_questions","artifacts","receipts","next_step","budget_remaining","trace_refs"],
+  "properties": {
+    "task_id": {"type":"string"}, "from": {"type":"string"}, "to": {"type":"string"},
+    "objective": {"type":"string"},
+    "definition_of_done": {"type":"array","items":{"type":"string"}},
+    "state_summary": {"type":"string","maxLength":2000},
+    "decisions": {"type":"array","items":{"type":"object","required":["id_or_assumption","text"],"properties":{"id_or_assumption":{"type":"string"},"text":{"type":"string"}}}},
+    "open_questions": {"type":"array","items":{"type":"string"}},
+    "risks": {"type":"array","items":{"type":"string"}},
+    "artifacts": {"type":"array","items":{"type":"string"}},
+    "receipts": {"type":"array","items":{"type":"string"}},
+    "next_step": {"type":"string"},
+    "budget_remaining": {"type":"object"},
+    "trace_refs": {"type":"array","items":{"type":"string"}}
+  }
+}

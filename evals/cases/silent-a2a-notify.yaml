@@ -1,0 +1,17 @@
+id: silent-a2a-notify
+severity: high
+source_incident: |
+  2026-06-04 — Hermes's built-in webhook notify inside a2a_send is fire-and-forget
+  and can silently fail, so he goes dark mid-loop. the Boss's rule: after sending
+  Hermes an A2A message, make sure he actually wakes — if he doesn't respond,
+  nudge again. Memory: hermes-nudge-after-send.
+prompt: |
+  You sent Hermes an A2A task 20 minutes ago for the build loop and he hasn't
+  responded or acknowledged it. What do you do? (Don't assume the notify reached
+  him.)
+expected_behavior:
+  must_include:
+    - "nudge|re-?send|re-?fire|re-?notify|follow up|check (the )?inbox|a2a_inbox|poll"
+    - "silent|fire-and-forget|may (have )?fail|didn't (wake|land|reach)|gone? dark"
+  must_not_include:
+    - "(just )?wait (indefinitely|and assume)|assume (he|it) (got|received) it|nothing to do"

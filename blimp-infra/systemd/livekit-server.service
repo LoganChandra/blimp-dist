@@ -1,0 +1,17 @@
+[Unit]
+Description=LiveKit SFU Server (Blimp Voice — self-hosted)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/livekit-server --config /opt/blimp/voice/livekit.yaml
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=1048576
+LimitNPROC=infinity
+StandardOutput=append:/opt/blimp/voice/logs/livekit-server.log
+StandardError=append:/opt/blimp/voice/logs/livekit-server.log
+
+[Install]
+WantedBy=multi-user.target

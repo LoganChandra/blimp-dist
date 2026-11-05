@@ -1,0 +1,17 @@
+[Unit]
+Description=Duke heartbeat — daytime watch-item pulse (duke-v2 P1.7, pure bash, zero tokens)
+# Reads HEARTBEAT.md, runs every non-expired check, stamps pulse:heartbeat.
+# Checks degrade gracefully (SKIP) when a dependency isn't up — no hard deps.
+After=network-online.target
+
+[Service]
+Type=oneshot
+# the Boss 2026-09-02: heartbeat itself costs zero tokens, but its tmux-nudge
+# wakes Duke's Claude Code session into paid investigation work while the Boss
+# is away. Alerts still go to #duke via the no-LLM `hermes send` path.
+# Set to 1 to let the heartbeat wake Duke again.
+Environment=HEARTBEAT_WAKE=0
+WorkingDirectory=%h/blimp/repo/blimp-infra/heartbeat
+ExecStart=/usr/bin/bash %h/blimp/repo/blimp-infra/heartbeat/heartbeat.sh
+StandardOutput=append:%h/blimp/logs/heartbeat.log
+StandardError=append:%h/blimp/logs/heartbeat.log

@@ -1,0 +1,34 @@
+# policies/authority.yaml — Authority matrix (spec §7.4). R4: the Boss types changes himself (rail #8 generalized).
+# Enforced by Toolgate; prompts only describe it.
+risk_tiers:
+  R0: "Read or think, no side effects"
+  R1: "Local and reversible: own worktree, drafts, private notes, sandbox runs"
+  R2: "Shared internal state: board, team memory proposals, branch pushes, PRs, staging deploys, internal Discord posts"
+  R3: "External or irreversible: merge to main, prod deploy, client or public comms, spending, deleting data, secrets and permissions, pricing changes, paid signups"
+  R4: "Constitutional: C1-C8, authority matrix, risk tiers, Toolgate policies, rails, budget caps — the Boss only, typed himself"
+
+agents:
+  duke:    { max_tier: R2, r3: request_only }
+  hermes:  { max_tier: R2, r3: request_only, note: "build tasks only when assigned by the Boss (D-003)" }
+  frank:   { max_tier: R3, r3: execute_with_token }
+  cofounder: { max_tier: R0, note: "ask-only until the Boss defines authority (G-4 default)" }
+  svc-verifier: { max_tier: R1 }
+  svc-reader:   { max_tier: R0 }
+  svc-scribe:   { max_tier: R1 }
+  svc-tooltester: { max_tier: R2 }
+
+logans_r4_only:
+  - L0 constitution
+  - authority matrix
+  - risk-tier table
+  - Toolgate policies
+  - rails / hook installation
+  - budget caps
+  - egress lists
+
+emergency_runbooks:
+  # pre-approved sev1/sev2 actions Frank MAY run; each use announced in #incidents and reviewed (G-9)
+  pre_approved:
+    - "rollback to last known-good release"
+    - "restart a crashed service"
+    - "rotate a leaked credential"

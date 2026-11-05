@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Talk to Frank</title>
+<style>
+  :root {
+    --bg: #0e0f0d; --ink: #ecebe4; --mute: #8d8b80; --line: #26272250;
+    --frank: #e3a64a; --you: #9cc3b2; --danger: #e0705a;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #f4f2ea; --ink: #1b1c18; --mute: #6b695f; --line: #1b1c1820;
+            --frank: #b5701a; --you: #3d7a62; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font: 16px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  body { display: grid; grid-template-rows: auto 1fr auto; min-height: 100dvh; }
+  header { display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; }
+  .name { font-weight: 650; letter-spacing: .01em; }
+  .name small { color: var(--mute); font-weight: 450; margin-left: 8px; }
+  header button { background: none; border: 1px solid var(--line); color: var(--mute);
+    border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+  header button:hover { color: var(--ink); }
+
+  main { display: grid; place-items: center; padding: 0 16px; }
+  .stage { display: grid; justify-items: center; gap: 28px; width: min(560px, 100%); }
+  .orb { --level: 0; width: 200px; height: 200px; border-radius: 50%; border: 0; cursor: pointer;
+    background: radial-gradient(circle at 38% 34%, #fff6e2 0%, var(--frank) 38%, #6b3f10 100%);
+    box-shadow: 0 0 calc(30px + var(--level) * 90px) calc(var(--level) * 22px) color-mix(in oklab, var(--frank) 45%, transparent);
+    transform: scale(calc(.86 + var(--level) * .22));
+    transition: transform 90ms linear, box-shadow 90ms linear, filter 300ms ease, opacity 300ms ease; }
+  .orb[data-state="off"] { filter: saturate(.25) brightness(.7); opacity: .8; }
+  .orb[data-state="listening"] { background: radial-gradient(circle at 38% 34%, #f1fff8 0%, var(--you) 40%, #1e4636 100%);
+    box-shadow: 0 0 calc(30px + var(--level) * 90px) calc(var(--level) * 22px) color-mix(in oklab, var(--you) 45%, transparent); }
+  .orb[data-state="thinking"] { animation: breathe 1.4s ease-in-out infinite; }
+  @keyframes breathe { 50% { transform: scale(.8); filter: brightness(.85); } }
+  @media (prefers-reduced-motion: reduce) {
+    .orb { transition: none; transform: none !important; animation: none !important; }
+  }
+  .status { color: var(--mute); font-size: 15px; min-height: 1.5em; text-align: center; }
+  .captions { width: 100%; max-height: 32dvh; overflow-y: auto; display: grid; gap: 10px;
+    padding: 4px 2px; scrollbar-width: thin; }
+  .line { margin: 0; }
+  .line b { font-weight: 650; margin-right: 6px; }
+  .line.you b { color: var(--you); }
+  .line.frank b { color: var(--frank); }
+  .line.interim { color: var(--mute); }
+
+  footer { display: flex; gap: 10px; padding: 16px 20px 24px; justify-content: center; flex-wrap: wrap; }
+  footer form { display: flex; gap: 8px; flex: 1 1 320px; max-width: 560px; }
+  input[type=text], select { flex: 1; min-width: 0; background: transparent; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 999px; padding: 10px 16px; font: inherit; }
+  select { flex: 0 1 220px; font-size: 13px; padding: 8px 12px; }
+  .btn { border: 0; border-radius: 999px; padding: 10px 18px; font: inherit; font-weight: 600;
+    cursor: pointer; background: var(--ink); color: var(--bg); }
+  .btn.end { background: var(--danger); color: #fff; }
+  .warn { color: var(--danger); }
+</style>
+</head>
+<body>
+<header>
+  <div class="name">Frank <small>voice</small></div>
+  <div>
+    <button id="reset" title="Start a fresh conversation (Frank forgets this call)">New conversation</button>
+  </div>
+</header>
+
+<main>
+  <div class="stage">
+    <button class="orb" id="orb" data-state="off" aria-label="Start or stop talking"></button>
+    <div class="status" id="status">Tap the orb to start talking</div>
+    <div class="captions" id="captions" aria-live="polite"></div>
+  </div>
+</main>
+
+<footer>
+  <button class="btn" id="toggle">Start</button>
+  <form id="typed">
+    <input type="text" id="typedText" placeholder="Or type to Frank" autocomplete="off">
+  </form>
+  <select id="voice" title="Frank's voice"></select>
+</footer>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const orb = $("orb"), statusEl = $("status"), caps = $("captions");
+  const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+                  set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+
+  let state = "off", active = false;
+  let pending = "", sendTimer = null, interimEl = null;
+  let ctrl = null, reply = "", replyEl = null, sentBuf = "", streamDone = true, queue = 0;
+  let lastSpokeAt = 0;
+
+  const STATUS = { off: "Tap the orb to start talking", listening: "Listening",
+                   thinking: "Frank is thinking", speaking: "Frank is talking. Just talk to cut in." };
+  function setState(s) { state = s; orb.dataset.state = s; statusEl.textContent = STATUS[s];
+                         statusEl.classList.remove("warn"); }
+  function warn(msg) { statusEl.textContent = msg; statusEl.classList.add("warn"); }
+
+  function addLine(who, text, cls = "") {
+    const p = document.createElement("p");
+    p.className = `line ${who} ${cls}`;
+    p.innerHTML = `<b>${who === "you" ? "You" : "Frank"}</b><span></span>`;
+    p.lastChild.textContent = text;
+    caps.appendChild(p); caps.scrollTop = caps.scrollHeight;
+    return p;
+  }
+
+  // ---------- voice out (speechSynthesis, sentence by sentence) ----------
+  const synth = window.speechSynthesis;
+  function voices() { return synth ? synth.getVoices().filter(v => v.lang.startsWith("en")) : []; }
+  function fillVoices() {
+    const sel = $("voice"), saved = store.get("frank.voice"), vs = voices();
+    if (!vs.length) return;
+    sel.innerHTML = "";
+    const rank = v => (/natural|online|neural/i.test(v.name) ? 0 : 1) + (/male|guy|david|daniel|ryan|google uk english male/i.test(v.name) ? 0 : .5);
+    vs.sort((a, b) => rank(a) - rank(b));
+    for (const v of vs) { const o = new Option(`${v.name}`, v.name); sel.add(o); }
+    sel.value = saved && vs.some(v => v.name === saved) ? saved : vs[0].name;
+  }
+  if (synth) { fillVoices(); synth.onvoiceschanged = fillVoices; }
+  $("voice").onchange = (e) => store.set("frank.voice", e.target.value);
+
+  function speak(text) {
+    text = text.replace(/[*_#`>]/g, "").trim();
+    if (!text || !synth) return;
+    const u = new SpeechSynthesisUtterance(text);
+    const v = voices().find(v => v.name === $("voice").value);
+    if (v) u.voice = v;
+    u.rate = 1.05;
+    queue++;
+    u.onstart = () => { if (state !== "off") setState("speaking"); };
+    u.onend = u.onerror = () => {
+      queue = Math.max(0, queue - 1); lastSpokeAt = Date.now();
+      if (!queue && streamDone && state !== "off") setState(active ? "listening" : "off");
+    };
+    synth.speak(u);
+  }
+  function flushSentences(final) {
+    // speak complete sentences as soon as they exist; the rest waits for more text
+    const re = /^[\s\S]*?[.!?](?=\s|$)/;
+    let m;
+    while ((m = sentBuf.match(re))) { speak(m[0]); sentBuf = sentBuf.slice(m[0].length); }
+    if (final && sentBuf.trim()) { speak(sentBuf); sentBuf = ""; }
+  }
+
+  function stopFrank() {
+    if (ctrl) { ctrl.abort(); ctrl = null; }
+    if (synth) synth.cancel();
+    queue = 0; sentBuf = ""; streamDone = true;
+  }
+
+  // ---------- the turn: text -> server -> streamed reply ----------
+  async function turn(text) {
+    text = text.trim(); if (!text) return;
+    stopFrank();
+    addLine("you", text);
+    reply = ""; sentBuf = ""; streamDone = false;
+    replyEl = null;
+    setState("thinking");
+    ctrl = new AbortController();
+    const my = ctrl;
+    try {
+      const r = await fetch("/api/turn", { method: "POST", signal: my.signal,
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.status);
+      const rd = r.body.getReader(), dec = new TextDecoder();
+      let buf = "";
+      for (;;) {
+        const { value, done } = await rd.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let i;
+        while ((i = buf.indexOf("\n\n")) >= 0) {
+          const chunk = buf.slice(0, i); buf = buf.slice(i + 2);
+          if (!chunk.startsWith("data: ")) continue;
+          const ev = JSON.parse(chunk.slice(6));
+          if (ev.type === "delta") {
+            reply += ev.text; sentBuf += ev.text;
+            if (!replyEl) replyEl = addLine("frank", "");
+            replyEl.lastChild.textContent = reply; caps.scrollTop = caps.scrollHeight;
+            flushSentences(false);
+          } else if (ev.type === "error") {
+            warn("Frank hit a snag: " + ev.message);
+          }
+        }
+      }
+      if (my !== ctrl) return;   // superseded by a newer turn
+      streamDone = true; ctrl = null;
+      flushSentences(true);
+      if (!queue && state !== "off") setState(active ? "listening" : "off");
+    } catch (e) {
+      if (e.name === "AbortError") return;
+      streamDone = true; warn("Could not reach Frank: " + e.message);
+      if (active) setTimeout(() => state !== "off" && setState("listening"), 2500);
+    }
+  }
+
+  // ---------- voice in (Web Speech recognition) ----------
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null;
+  const words = (s) => s.toLowerCase().replace(/[^a-z0-9' ]/g, " ").split(/\s+/).filter(Boolean);
+  function isEcho(heard) {
+    // with speakers (not headphones) the mic hears Frank; ignore what matches his own words
+    if (state !== "speaking" && Date.now() - lastSpokeAt > 800) return false;
+    const mine = new Set(words(reply)), w = words(heard);
+    if (!w.length) return true;
+    return w.filter(x => mine.has(x)).length / w.length >= 0.6;
+  }
+  function startRec() {
+    if (!SR) { warn("Voice input needs Chrome or Edge. You can still type below."); return; }
+    rec = new SR();
+    rec.continuous = true; rec.interimResults = true;
+    rec.lang = store.get("frank.lang") || "en-US";
+    rec.onresult = (e) => {
+      let interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) { if (!isEcho(t)) pending += " " + t; }
+        else interim += t;
+      }
+      const heard = (pending + " " + interim).trim();
+      if (interim && !isEcho(interim) && words(interim).length >= 2 && (state === "speaking" || state === "thinking")) {
+        stopFrank(); setState("listening");              // barge-in
+        fetch("/api/cancel", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      }
+      if (heard && !isEcho(heard)) {
+        if (!interimEl) interimEl = addLine("you", "", "interim");
+        interimEl.lastChild.textContent = heard;
+      }
+      clearTimeout(sendTimer);
+      if (!pending.trim()) sendTimer = setTimeout(() => {   // interim that never became final
+        if (interimEl) { interimEl.remove(); interimEl = null; }
+      }, 2500);
+      else sendTimer = setTimeout(() => {
+        const t = pending; pending = "";
+        if (interimEl) { interimEl.remove(); interimEl = null; }
+        turn(t);
+      }, interim ? 1400 : 700);
+    };
+    rec.onerror = (e) => {
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") { warn("Microphone blocked. Allow it in the address bar."); stop(); }
+    };
+    rec.onend = () => { if (active) { try { rec.start(); } catch {} } };
+    rec.start();
+  }
+
+  // mic level -> orb size (visual feedback only; audio never leaves this page here)
+  let audioCtx = null, micStream = null, raf = 0;
+  async function startLevel() {
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true } });
+      audioCtx = new AudioContext();
+      const an = audioCtx.createAnalyser(); an.fftSize = 512;
+      audioCtx.createMediaStreamSource(micStream).connect(an);
+      const data = new Uint8Array(an.fftSize);
+      const tick = () => {
+        an.getByteTimeDomainData(data);
+        let sum = 0; for (const x of data) sum += (x - 128) ** 2;
+        const lvl = state === "listening" ? Math.min(1, Math.sqrt(sum / data.length) / 30) : (state === "speaking" ? .35 : 0);
+        orb.style.setProperty("--level", lvl.toFixed(3));
+        raf = requestAnimationFrame(tick);
+      };
+      tick();
+    } catch (e) { if (e.name === "NotAllowedError") warn("Microphone blocked. Allow it in the address bar."); }
+  }
+
+  function start() {
+    active = true; $("toggle").textContent = "End"; $("toggle").classList.add("end");
+    setState("listening"); startRec(); startLevel();
+    if (synth) synth.speak(new SpeechSynthesisUtterance(""));   // unlock audio on this user gesture
+  }
+  function stop() {
+    active = false; $("toggle").textContent = "Start"; $("toggle").classList.remove("end");
+    stopFrank(); if (rec) { rec.onend = null; try { rec.stop(); } catch {} rec = null; }
+    cancelAnimationFrame(raf); orb.style.setProperty("--level", 0);
+    if (micStream) micStream.getTracks().forEach(t => t.stop());
+    if (audioCtx) audioCtx.close(); micStream = audioCtx = null;
+    setState("off");
+  }
+  orb.onclick = $("toggle").onclick = () => (active ? stop() : start());
+  $("typed").onsubmit = (e) => { e.preventDefault(); const t = $("typedText").value; $("typedText").value = ""; turn(t); };
+  $("reset").onclick = async () => {
+    stopFrank(); caps.innerHTML = "";
+    await fetch("/api/reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    statusEl.textContent = "Fresh conversation. " + STATUS[state];
+  };
+  window.__frank = { turn, get state() { return state; }, get reply() { return reply; } };  // test hook
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+[Unit]
+Description=Duke eval suite — incident-derived regression run (duke-v2 P1.8, read-only harness)
+# Headless claude -p over evals/cases/*.yaml; mutating tools are hard-denied in
+# run-evals.sh, so a scheduled run can't touch the brain, Discord, git, or disk.
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/blimp/repo/evals
+ExecStart=/usr/bin/bash %h/blimp/repo/evals/run-evals.sh
+StandardOutput=append:%h/blimp/logs/evals.log
+StandardError=append:%h/blimp/logs/evals.log

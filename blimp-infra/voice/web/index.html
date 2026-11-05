@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blimp Voice</title>
+<style>
+  /* ─── Reset & Base ───────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a28;
+    --border: #2a2a3e;
+    --text: #e0e0f0;
+    --text2: #8888aa;
+    --hermes: #a855f7;
+    --hermes-glow: rgba(168,85,247,0.3);
+    --duke: #3b82f6;
+    --duke-glow: rgba(59,130,246,0.3);
+    --thinking: #f59e0b;
+    --speaking: #22c55e;
+    --listening: #8888aa;
+    --error: #ef4444;
+    --radius: 12px;
+    --font: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    user-select: none;
+  }
+
+  /* ─── Access Gate ─────────────────────────────────── */
+  #access-gate {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    transition: opacity 0.4s ease;
+  }
+  #access-gate.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .gate-card {
+    width: 100%; max-width: 400px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 36px 32px;
+    text-align: center;
+  }
+  .gate-card h1 {
+    font-size: 1.5rem; font-weight: 600; margin-bottom: 4px;
+  }
+  .gate-card p {
+    color: var(--text2); font-size: 0.9rem; margin-bottom: 24px;
+  }
+  .gate-card .lock-icon {
+    width: 48px; height: 48px;
+    background: var(--surface2);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px;
+    font-size: 1.4rem;
+  }
+  .gate-card input {
+    width: 100%;
+    height: 44px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0 14px;
+    color: var(--text);
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .gate-card input:focus {
+    border-color: var(--hermes);
+  }
+  .gate-card button {
+    width: 100%; height: 44px; margin-top: 12px;
+    background: var(--hermes);
+    border: none; border-radius: 10px;
+    color: white; font-size: 0.95rem; font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .gate-card button:hover { opacity: 0.9; }
+  .gate-card button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .gate-error {
+    color: var(--error); font-size: 0.85rem;
+    margin-top: 12px; display: none;
+  }
+  .gate-error.visible { display: block; }
+  .gate-loading {
+    display: inline-block;
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── Main Card ─────────────────────────────────────── */
+  .card {
+    width: 100%;
+    max-width: 460px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  }
+
+  /* ─── Header ───────────────────────────────────────── */
+  .header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .logo {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--text2); font-weight: 400; }
+  .conn-badge {
+    font-size: 11px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+    transition: all 0.3s;
+  }
+  .conn-badge.disconnected {
+    background: rgba(239,68,68,0.15);
+    color: #ef4444;
+  }
+  .conn-badge.connecting {
+    background: rgba(245,158,11,0.15);
+    color: #f59e0b;
+  }
+  .conn-badge.connected {
+    background: rgba(34,197,94,0.15);
+    color: #22c55e;
+  }
+
+  /* ─── Persona Selector ─────────────────────────────── */
+  .persona-row {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+  }
+  .persona-btn {
+    flex: 1;
+    padding: 10px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text2);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: var(--font);
+  }
+  .persona-btn:hover { background: var(--surface2); }
+  .persona-btn.active-hermes {
+    border-color: var(--hermes);
+    color: #fff;
+    background: rgba(168,85,247,0.12);
+    box-shadow: 0 0 16px var(--hermes-glow);
+  }
+  .persona-btn.active-duke {
+    border-color: var(--duke);
+    color: #fff;
+    background: rgba(59,130,246,0.12);
+    box-shadow: 0 0 16px var(--duke-glow);
+  }
+
+  /* ─── Orb ──────────────────────────────────────────── */
+  .orb-wrap {
+    position: relative;
+    width: 160px;
+    height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 8px 0;
+  }
+  .orb {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #444, #111);
+    transition: all 0.35s ease;
+    position: relative;
+    z-index: 1;
+  }
+  .orb.idle {
+    background: radial-gradient(circle at 30% 30%, #2a2a3e, #111);
+    box-shadow: 0 0 20px rgba(0,0,0,0.3);
+  }
+  .orb.listening {
+    background: radial-gradient(circle at 30% 30%, #555577, #1a1a2e);
+    box-shadow: 0 0 30px rgba(136,136,170,0.2);
+  }
+  .orb.thinking {
+    background: radial-gradient(circle at 30% 30%, #f59e0b, #92400e);
+    box-shadow: 0 0 50px var(--thinking);
+    animation: pulse-think 1.2s ease-in-out infinite;
+  }
+  .orb.speaking {
+    background: radial-gradient(circle at 30% 30%, #22c55e, #166534);
+    box-shadow: 0 0 50px var(--speaking);
+    animation: pulse-speak 0.8s ease-in-out infinite;
+  }
+  .orb.tool {
+    background: radial-gradient(circle at 30% 30%, #3b82f6, #1e40af);
+    box-shadow: 0 0 40px var(--duke-glow);
+    animation: pulse-think 0.6s ease-in-out infinite;
+  }
+  .orb.hermes-color { border: 2px solid var(--hermes); }
+  .orb.duke-color { border: 2px solid var(--duke); }
+
+  @keyframes pulse-think {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.08); opacity: 1; }
+  }
+  @keyframes pulse-speak {
+    0%, 100% { transform: scale(1.04); }
+    50% { transform: scale(0.96); }
+  }
+
+  .orb-ring {
+    position: absolute;
+    width: 156px;
+    height: 156px;
+    border-radius: 50%;
+    border: 1px solid transparent;
+    transition: all 0.4s;
+    pointer-events: none;
+  }
+  .orb-ring.active {
+    border-color: var(--hermes);
+    animation: ring-pulse 2s ease-in-out infinite;
+  }
+  .orb-ring.active-duke {
+    border-color: var(--duke);
+  }
+  @keyframes ring-pulse {
+    0%, 100% { transform: scale(0.95); opacity: 0.3; }
+    50% { transform: scale(1.05); opacity: 0.6; }
+  }
+
+  .state-label {
+    font-size: 12px;
+    color: var(--text2);
+    margin-top: -12px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: 500;
+    transition: color 0.3s;
+  }
+  .state-label.active { color: var(--hermes); }
+
+  /* ─── Audio Visualizer ─────────────────────────────── */
+  .viz {
+    width: 100%;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+  }
+  .viz-bar {
+    width: 4px;
+    border-radius: 4px;
+    background: var(--surface2);
+    transition: height 0.08s, background 0.3s;
+    height: 4px;
+    min-height: 4px;
+  }
+  .viz-bar.active-hermes { background: var(--hermes); }
+  .viz-bar.active-duke { background: var(--duke); }
+
+  /* ─── Transcript ───────────────────────────────────── */
+  .transcript-area {
+    width: 100%;
+    height: 180px;
+    background: var(--surface2);
+    border-radius: var(--radius);
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scroll-behavior: smooth;
+  }
+  .transcript-area::-webkit-scrollbar { width: 4px; }
+  .transcript-area::-webkit-scrollbar-track { background: transparent; }
+  .transcript-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .msg {
+    padding: 8px 14px;
+    border-radius: 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    max-width: 85%;
+    word-break: break-word;
+    animation: fade-in 0.25s ease;
+  }
+  .msg.user {
+    background: rgba(255,255,255,0.06);
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+    color: var(--text);
+  }
+  .msg.assistant {
+    background: rgba(168,85,247,0.1);
+    border: 1px solid rgba(168,85,247,0.15);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+    color: #d0d0f0;
+  }
+  .msg.assistant.duke-msg {
+    background: rgba(59,130,246,0.1);
+    border-color: rgba(59,130,246,0.15);
+  }
+  .msg.interim {
+    opacity: 0.6;
+    font-style: italic;
+  }
+  .msg.tool-indicator {
+    align-self: center;
+    background: transparent;
+    color: var(--text2);
+    font-size: 11px;
+    padding: 4px 12px;
+    border: 1px dashed var(--border);
+    border-radius: 20px;
+  }
+  .msg.tool-indicator.hermes-tool { border-color: var(--hermes); }
+  .msg.tool-indicator.duke-tool { border-color: var(--duke); }
+
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .empty-transcript {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text2);
+    font-size: 13px;
+    opacity: 0.5;
+  }
+
+  /* ─── Controls ─────────────────────────────────────── */
+  .controls {
+    width: 100%;
+    display: flex;
+    gap: 12px;
+  }
+  .btn {
+    flex: 1;
+    padding: 14px 24px;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: var(--font);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .btn-call {
+    background: linear-gradient(135deg, var(--hermes), #7c3aed);
+    color: #fff;
+    box-shadow: 0 4px 20px var(--hermes-glow);
+  }
+  .btn-call:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 24px var(--hermes-glow); }
+  .btn-call.active {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    box-shadow: 0 4px 20px rgba(239,68,68,0.3);
+  }
+  .btn-call.active:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(239,68,68,0.4); }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text2);
+    border: 1px solid var(--border);
+    flex: 0.5;
+  }
+  .btn-secondary:hover:not(:disabled) { background: var(--border); color: var(--text); }
+
+  /* ─── Footer ───────────────────────────────────────── */
+  .footer {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text2);
+    opacity: 0.5;
+  }
+
+  /* ─── Responsive ───────────────────────────────────── */
+  @media (max-width: 500px) {
+    .card { max-width: 100%; border-radius: 16px; padding: 20px; }
+    .orb-wrap { width: 120px; height: 120px; }
+    .orb { width: 90px; height: 90px; }
+    .orb-ring { width: 116px; height: 116px; }
+    .transcript-area { height: 140px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ Access Gate ═══ -->
+<div id="access-gate">
+  <div class="gate-card">
+    <div class="lock-icon">🔐</div>
+    <h1>Access Required</h1>
+    <p>Enter the access key to use Blimp Voice</p>
+    <input id="gate-password" type="password" placeholder="Access key" autofocus>
+    <button id="gate-submit" onclick="tryAccess()">Unlock</button>
+    <div id="gate-error" class="gate-error">Incorrect access key</div>
+  </div>
+</div>
+
+<div class="card" id="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">Blimp <span>Voice</span></div>
+    <div class="conn-badge disconnected" id="connBadge">Disconnected</div>
+  </div>
+
+  <!-- Persona -->
+  <div class="persona-row">
+    <button class="persona-btn active-hermes" data-persona="hermes" id="pHermes">⚡ Hermes</button>
+    <button class="persona-btn" data-persona="duke" id="pDuke">🔧 Duke</button>
+  </div>
+
+  <!-- Orb -->
+  <div class="orb-wrap">
+    <div class="orb-ring" id="orbRing"></div>
+    <div class="orb idle hermes-color" id="orb"></div>
+  </div>
+  <div class="state-label" id="stateLabel">Idle</div>
+
+  <!-- Visualizer -->
+  <div class="viz" id="viz"></div>
+
+  <!-- Transcript -->
+  <div class="transcript-area" id="transcript">
+    <div class="empty-transcript">Voice interface ready</div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button class="btn btn-call" id="btnCall" disabled>🎤 Start Call</button>
+    <button class="btn btn-secondary" id="btnReset" disabled>↺ Reset</button>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span id="statusDetail">Deepseek V4 Flash</span>
+    <span id="turnCounter">0 turns</span>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// Blimp Voice — Browser Client
+// ═══════════════════════════════════════════════════════════════
+
+// ─── State ─────────────────────────────────────────────────────
+
+const state = {
+  ws: null,
+  audioCtx: null,
+  micStream: null,
+  processor: null,
+  connected: false,
+  calling: false,
+  persona: 'hermes',
+  streamState: 'idle', // idle | listening | thinking | speaking | tool
+  turnCount: 0,
+  reconnectTimer: null,
+  audioQueue: [],
+  isPlaying: false,
+};
+
+// ─── DOM refs ──────────────────────────────────────────────────
+
+const $ = (id) => document.getElementById(id);
+const orb = $('orb');
+const orbRing = $('orbRing');
+const stateLabel = $('stateLabel');
+const connBadge = $('connBadge');
+const transcript = $('transcript');
+const btnCall = $('btnCall');
+const btnReset = $('btnReset');
+const viz = $('viz');
+const statusDetail = $('statusDetail');
+const turnCounter = $('turnCounter');
+
+// ─── Visualizer ────────────────────────────────────────────────
+
+const BAR_COUNT = 32;
+let vizBars = [];
+
+function initViz() {
+  viz.innerHTML = '';
+  for (let i = 0; i < BAR_COUNT; i++) {
+    const bar = document.createElement('div');
+    bar.className = 'viz-bar';
+    viz.appendChild(bar);
+    vizBars.push(bar);
+  }
+}
+initViz();
+
+function updateViz(level) {
+  // level: 0..1 average audio level
+  const bars = Math.floor(level * BAR_COUNT);
+  for (let i = 0; i < BAR_COUNT; i++) {
+    const h = i < bars ? 8 + (level * 32) : 4;
+    vizBars[i].style.height = h + 'px';
+    const active = state.persona;
+    vizBars[i].classList.toggle('active-hermes', i < bars && active === 'hermes');
+    vizBars[i].classList.toggle('active-duke', i < bars && active === 'duke');
+  }
+}
+
+let vizInterval = null;
+function startViz() { /* updated by audio processor */ }
+function stopViz() {
+  for (const bar of vizBars) {
+    bar.style.height = '4px';
+    bar.classList.remove('active-hermes', 'active-duke');
+  }
+}
+
+// ─── Audio Capture ─────────────────────────────────────────────
+
+let audioInterval = null;
+
+async function startMic() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        sampleRate: 16000,
+        channelCount: 1,
+      }
+    });
+
+    const audioCtx = new AudioContext({ sampleRate: 16000 });
+    const source = audioCtx.createMediaStreamSource(stream);
+    const processor = audioCtx.createScriptProcessor(2048, 1, 1);
+
+    source.connect(processor);
+    processor.connect(audioCtx.destination);
+
+    state.audioCtx = audioCtx;
+    state.micStream = stream;
+    state.processor = processor;
+
+    processor.onaudioprocess = (e) => {
+      if (!state.calling || !state.ws || state.ws.readyState !== WebSocket.OPEN) return;
+
+      const input = e.inputBuffer.getChannelData(0);
+
+      // Update visualizer
+      let sum = 0;
+      for (let i = 0; i < input.length; i++) {
+        sum += Math.abs(input[i]);
+      }
+      const level = Math.min(1, sum / input.length * 4);
+      updateViz(level);
+
+      // Convert Float32 → Int16 PCM
+      const pcm = new Int16Array(input.length);
+      for (let i = 0; i < input.length; i++) {
+        const s = Math.max(-1, Math.min(1, input[i]));
+        pcm[i] = s < 0 ? s * 32768 : s * 32767;
+      }
+      state.ws.send(pcm.buffer);
+    };
+
+    return true;
+  } catch (err) {
+    console.error('Mic error:', err);
+    addMsg('system', `Microphone error: ${err.message}`);
+    return false;
+  }
+}
+
+function stopMic() {
+  if (state.processor) {
+    state.processor.disconnect();
+    state.processor = null;
+  }
+  if (state.micStream) {
+    state.micStream.getTracks().forEach(t => t.stop());
+    state.micStream = null;
+  }
+  if (state.audioCtx) {
+    state.audioCtx.close().catch(() => {});
+    state.audioCtx = null;
+  }
+  stopViz();
+}
+
+// ─── Audio Playback ────────────────────────────────────────────
+
+function playAudio(pcmBuffer) {
+  state.audioQueue.push(pcmBuffer);
+  if (!state.isPlaying) {
+    state.isPlaying = true;
+    processQueue();
+  }
+}
+
+function processQueue() {
+  if (state.audioQueue.length === 0) {
+    state.isPlaying = false;
+    return;
+  }
+
+  const pcmBuffer = state.audioQueue.shift();
+  const pcm = new Int16Array(pcmBuffer);
+
+  // Convert to Float32
+  const floatLen = pcm.length;
+  const floatData = new Float32Array(floatLen);
+  for (let i = 0; i < floatLen; i++) {
+    floatData[i] = pcm[i] / 32768;
+  }
+
+  try {
+    const ctx = state.audioCtx || new AudioContext({ sampleRate: 16000 });
+    if (!state.audioCtx) state.audioCtx = ctx;
+
+    const buffer = ctx.createBuffer(1, floatLen, 16000);
+    buffer.getChannelData(0).set(floatData);
+
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.onended = () => processQueue();
+    source.start();
+  } catch (err) {
+    console.error('Playback error:', err);
+    processQueue();
+  }
+}
+
+function stopPlayback() {
+  state.audioQueue = [];
+  state.isPlaying = false;
+  // Close and reopen audio context to kill all sound
+  if (state.audioCtx && state.audioCtx.state !== 'closed') {
+    state.audioCtx.close().catch(() => {});
+    state.audioCtx = null;
+  }
+}
+
+// ─── WebSocket ─────────────────────────────────────────────────
+
+// Auto-detect WebSocket URL from current location
+const WS_URL = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`;
+
+function connect() {
+  if (state.ws && (state.ws.readyState === WebSocket.OPEN || state.ws.readyState === WebSocket.CONNECTING)) {
+    return;
+  }
+
+  setConnStatus('connecting');
+  addMsg('system', 'Connecting...');
+
+  const ws = new WebSocket(WS_URL);
+  state.ws = ws;
+
+  ws.onopen = () => {
+    state.connected = true;
+    setConnStatus('connected');
+    btnCall.disabled = false;
+    btnReset.disabled = false;
+    addMsg('system', 'Connected');
+  };
+
+  ws.onmessage = (event) => {
+    if (event.data instanceof ArrayBuffer) {
+      // Binary = PCM audio
+      playAudio(event.data);
+      return;
+    }
+
+    try {
+      const msg = JSON.parse(event.data);
+      handleMessage(msg);
+    } catch (e) {
+      console.warn('Non-JSON message:', event.data);
+    }
+  };
+
+  ws.onclose = () => {
+    state.connected = false;
+    state.calling = false;
+    btnCall.disabled = true;
+    btnReset.disabled = true;
+    btnCall.textContent = '🎤 Start Call';
+    btnCall.classList.remove('active');
+    setConnStatus('disconnected');
+    stopMic();
+    stopPlayback();
+    addMsg('system', 'Disconnected');
+  };
+
+  ws.onerror = (err) => {
+    console.error('WS error:', err);
+    addMsg('system', 'Connection error');
+  };
+}
+
+function disconnect() {
+  if (state.ws) {
+    state.ws.close();
+    state.ws = null;
+  }
+  state.connected = false;
+  state.calling = false;
+  stopMic();
+  stopPlayback();
+}
+
+function sendText(data) {
+  if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+    state.ws.send(JSON.stringify(data));
+  }
+}
+
+// ─── Message Handler ───────────────────────────────────────────
+
+function handleMessage(msg) {
+  switch (msg.type) {
+    case 'hello':
+      statusDetail.textContent = msg.model || 'Deepseek V4 Flash';
+      break;
+
+    case 'status':
+      setStreamState(msg.state);
+      if (msg.state === 'listening') {
+        // Stream just became available again after thinking/speaking
+      }
+      break;
+
+    case 'transcript':
+      // Update or add interim transcript
+      if (msg.is_final) {
+        removeInterim();
+        addMsg('user', msg.text);
+        setStreamState('thinking');
+      } else {
+        updateInterim(msg.text);
+        if (state.streamState !== 'speaking') {
+          setStreamState('listening');
+        }
+      }
+      break;
+
+    case 'llm_text':
+      // Streaming partial LLM text — show as assistant
+      updateAssistantStream(msg.text);
+      break;
+
+    case 'turn_end':
+      finalizeAssistant();
+      state.turnCount++;
+      turnCounter.textContent = `${state.turnCount} turns`;
+      setStreamState('listening');
+      break;
+
+    case 'tool_call':
+      addToolIndicator(`🔧 ${msg.tool}...`);
+      setStreamState('tool');
+      break;
+
+    case 'tool_result':
+      // Tool result received, back to thinking
+      setStreamState('thinking');
+      break;
+
+    case 'barge_in':
+      stopPlayback();
+      addMsg('system', '⏎ Interrupted');
+      setStreamState('listening');
+      break;
+
+    case 'config':
+      addMsg('system', `Switched to ${msg.persona}`);
+      state.persona = msg.persona;
+      updatePersonaUI();
+      break;
+
+    case 'error':
+      addMsg('system', `⚠️ ${msg.message}`);
+      break;
+
+    case 'pong':
+      break;
+  }
+}
+
+// ─── Transcript Helpers ────────────────────────────────────────
+
+let assistantStreamEl = null;
+
+function addMsg(role, text) {
+  removeEmptyPlaceholder();
+
+  const el = document.createElement('div');
+  el.className = `msg ${role}`;
+  if (role === 'assistant' && state.persona === 'duke') {
+    el.classList.add('duke-msg');
+  }
+  el.textContent = text;
+  transcript.appendChild(el);
+  scrollTranscript();
+
+  // Reset stream state
+  assistantStreamEl = null;
+  return el;
+}
+
+function updateInterim(text) {
+  let el = transcript.querySelector('.msg.interim');
+  if (!el) {
+    removeEmptyPlaceholder();
+    el = document.createElement('div');
+    el.className = 'msg interim';
+    transcript.appendChild(el);
+  }
+  el.textContent = text;
+  scrollTranscript();
+}
+
+function removeInterim() {
+  const el = transcript.querySelector('.msg.interim');
+  if (el) el.remove();
+}
+
+function updateAssistantStream(chunk) {
+  if (!assistantStreamEl) {
+    removeEmptyPlaceholder();
+    assistantStreamEl = document.createElement('div');
+    assistantStreamEl.className = 'msg assistant';
+    if (state.persona === 'duke') {
+      assistantStreamEl.classList.add('duke-msg');
+    }
+    transcript.appendChild(assistantStreamEl);
+  }
+  assistantStreamEl.textContent += chunk;
+  scrollTranscript();
+}
+
+function finalizeAssistant() {
+  assistantStreamEl = null;
+}
+
+function addToolIndicator(text) {
+  removeEmptyPlaceholder();
+  const el = document.createElement('div');
+  el.className = `msg tool-indicator ${state.persona}-tool`;
+  el.textContent = text;
+  transcript.appendChild(el);
+  scrollTranscript();
+}
+
+function removeEmptyPlaceholder() {
+  const empty = transcript.querySelector('.empty-transcript');
+  if (empty) empty.remove();
+}
+
+function scrollTranscript() {
+  transcript.scrollTop = transcript.scrollHeight;
+}
+
+// ─── UI State ──────────────────────────────────────────────────
+
+function setConnStatus(status) {
+  connBadge.className = 'conn-badge ' + status;
+  connBadge.textContent = {
+    disconnected: 'Disconnected',
+    connecting: 'Connecting…',
+    connected: 'Connected',
+  }[status] || status;
+}
+
+function setStreamState(s) {
+  state.streamState = s;
+
+  const classes = { idle: 'idle', listening: 'listening', thinking: 'thinking', speaking: 'speaking', tool: 'tool' };
+  orb.className = `orb ${classes[s] || 'idle'}`;
+
+  // Add color class
+  orb.classList.add(state.persona + '-color');
+
+  // Ring
+  orbRing.className = 'orb-ring';
+  if (s !== 'idle') {
+    orbRing.classList.add('active');
+    if (state.persona === 'duke') orbRing.classList.add('active-duke');
+  }
+
+  const labels = {
+    idle: 'Idle',
+    listening: 'Listening',
+    thinking: 'Thinking',
+    speaking: 'Speaking',
+    tool: 'Tool',
+  };
+  stateLabel.textContent = labels[s] || s;
+  stateLabel.classList.toggle('active', s !== 'idle');
+}
+
+function updatePersonaUI() {
+  const isDuke = state.persona === 'duke';
+  $('pHermes').className = `persona-btn ${isDuke ? '' : 'active-hermes'}`;
+  $('pDuke').className = `persona-btn ${isDuke ? 'active-duke' : ''}`;
+  orb.className = `orb ${orb.className.split(' ').filter(c => !c.includes('color')).join(' ')}`;
+  orb.classList.add(state.persona + '-color');
+}
+
+// ─── Event Handlers ────────────────────────────────────────────
+
+btnCall.addEventListener('click', async () => {
+  if (!state.connected) return;
+
+  if (!state.calling) {
+    // Start call
+    const ok = await startMic();
+    if (!ok) return;
+
+    state.calling = true;
+    btnCall.textContent = '⏹ End Call';
+    btnCall.classList.add('active');
+    addMsg('system', '🎤 Mic active');
+    sendText({ type: 'config', persona: state.persona });
+  } else {
+    // End call
+    state.calling = false;
+    stopMic();
+    stopPlayback();
+    btnCall.textContent = '🎤 Start Call';
+    btnCall.classList.remove('active');
+    setStreamState('idle');
+    addMsg('system', '🎤 Mic off');
+  }
+});
+
+btnReset.addEventListener('click', () => {
+  if (!state.connected) return;
+  sendText({ type: 'reset' });
+  transcript.innerHTML = '<div class="empty-transcript">Conversation reset</div>';
+  state.turnCount = 0;
+  turnCounter.textContent = '0 turns';
+  stopPlayback();
+});
+
+document.querySelectorAll('.persona-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const persona = btn.dataset.persona;
+    state.persona = persona;
+    updatePersonaUI();
+    if (state.connected) {
+      sendText({ type: 'config', persona });
+    }
+  });
+});
+
+// ─── Connect on load ───────────────────────────────────────────
+
+async function checkAuthAndInit() {
+  try {
+    const resp = await fetch('/api/auth-status');
+    const data = await resp.json();
+    if (data.authenticated) {
+      document.getElementById('access-gate').classList.add('hidden');
+      connect();
+    } else {
+      // Show gate - listen for Enter key
+      document.getElementById('gate-password').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') tryAccess();
+      });
+    }
+  } catch (e) {
+    // If auth endpoint fails, allow access (fallback)
+    console.warn('Auth check failed, allowing access:', e);
+    document.getElementById('access-gate').classList.add('hidden');
+    connect();
+  }
+}
+
+async function tryAccess() {
+  const input = document.getElementById('gate-password');
+  const btn = document.getElementById('gate-submit');
+  const error = document.getElementById('gate-error');
+  const password = input.value.trim();
+
+  if (!password) return;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="gate-loading"></span> Verifying...';
+  error.classList.remove('visible');
+
+  try {
+    const resp = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    if (resp.ok) {
+      document.getElementById('access-gate').classList.add('hidden');
+      connect();
+    } else {
+      error.classList.add('visible');
+      btn.disabled = false;
+      btn.textContent = 'Unlock';
+      input.value = '';
+      input.focus();
+    }
+  } catch (e) {
+    error.textContent = 'Network error - try again';
+    error.classList.add('visible');
+    btn.disabled = false;
+    btn.textContent = 'Unlock';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', checkAuthAndInit);
+</script>
+</body>
+</html>

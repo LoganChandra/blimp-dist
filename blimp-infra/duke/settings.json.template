@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "*"
+    ]
+  },
+  "enabledPlugins": {
+    "discord@claude-plugins-official": true,
+    "supabase@claude-plugins-official": true,
+    "vercel@claude-plugins-official": true,
+    "github@claude-plugins-official": true,
+    "zapier@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      }
+    }
+  },
+  "effortLevel": "high",
+  "theme": "dark",
+  "skipAutoPermissionPrompt": true
+}

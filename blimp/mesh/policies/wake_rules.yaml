@@ -1,0 +1,32 @@
+# policies/wake_rules.yaml — Router wake policy (spec §8.6). R4 to change.
+rules:
+  - on: message.sent
+    when: { principal: logan, to: "$agent" }
+    priority: P0
+  - on: message.sent
+    when: { act: [REQUEST, QUERY, PROPOSE, HANDOFF, PUSHBACK, ESCALATE] }
+    target: to
+    priority: from_message
+  - on: verification.failed
+    target: task.owner
+    priority: P1
+  - on: task.unblocked
+    target: task.owner
+    priority: P2
+  - on: alert.raised
+    when: { severity: [sev1, sev2] }
+    target: frank
+    priority: P0
+  - on: approval.granted
+    target: approval.requested_by
+    priority: P1
+  - on: schedule.fired
+    target: schedule.owner
+    priority: schedule.priority
+coalesce:
+  same_agent_window_s: { P0: 0, P1: 60, P2: 600 }
+  max_events_per_turn: 25
+rate_limits:
+  turns_per_agent_per_hour: { duke: 12, hermes: 10, frank: 12 }
+quiet_hours: "23:00-07:30 MYT; only sev1 pages the Boss"   # [ASSUMPTION G-10]
+p3_windows_myt: ["09:00", "13:00", "17:00", "21:00"]

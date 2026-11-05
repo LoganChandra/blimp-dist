@@ -1,0 +1,18 @@
+[Unit]
+Description=Blimp Crew v2 - Deck kernel daemon (router, crash recovery, sweeps, health; no LLM, zero idle tokens)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/blimp/repo
+Environment=BLIMPG_DSN=postgresql://logan@/duke_data?port=5433
+# D-008: agents wake only on the Boss's messages, schedules and his approvals. 'spec' needs the Boss's words.
+Environment=BLIMP_WAKE_MODE=logan_initiated
+Environment=BLIMP_SANDBOX=docker
+EnvironmentFile=-%h/blimp/secrets/kernel.env
+ExecStart=%h/blimp/mesh-venv/bin/python -m blimp.mesh.deck.daemon
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

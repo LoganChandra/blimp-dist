@@ -1,0 +1,21 @@
+[Unit]
+Description=Blimp Orchestrator (Generator-Verifier supervisor loop)
+After=network-online.target a2a-broker.service
+Wants=network-online.target
+Requires=a2a-broker.service
+
+[Service]
+Type=simple
+Environment="DUKE_DB_URL=postgresql:///duke_data?host=/var/run/postgresql&port=5433"
+Environment="A2A_BROKER_PUBLIC_URL=http://localhost:9091"
+WorkingDirectory=%h/blimp/repo/blimp-infra
+ExecStart=%h/blimp/duke-venv/bin/python orchestrator/supervisor.py
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=300
+StartLimitBurst=5
+StandardOutput=append:%h/.hermes/logs/orchestrator.log
+StandardError=append:%h/.hermes/logs/orchestrator.log
+
+[Install]
+WantedBy=default.target

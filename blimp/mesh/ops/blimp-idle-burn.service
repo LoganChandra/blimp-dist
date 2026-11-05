@@ -1,0 +1,9 @@
+[Unit]
+Description=Blimp Crew v2 - hourly zero-token spend probe (idle-burn SLO)
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/blimp/repo
+Environment=BLIMPG_DSN=postgresql://logan@/duke_data?port=5433
+EnvironmentFile=%h/blimp/secrets/openrouter.env
+ExecStart=%h/blimp/mesh-venv/bin/python -m blimp.mesh.ops.idle_burn sample

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://blimp.my/schemas/turn-request.v1.json",
+  "type": "object",
+  "required": ["turn_id","agent","priority","trigger_event_ids","limits","prompt_version"],
+  "properties": {
+    "turn_id": {"type":"string"},
+    "agent": {"type":"string"},
+    "task_id": {"type":["string","null"]},
+    "priority": {"enum":["P0","P1","P2","P3"]},
+    "trigger_event_ids": {"type":"array","items":{"type":"integer"}},
+    "limits": {"type":"object","required":["max_input_tokens","max_output_tokens","max_tool_calls","max_wall_clock_s"]},
+    "prompt_version": {"type":"string"},
+    "mode": {"enum":["normal","draft_only","readonly"], "default":"normal"},
+    "model_route": {"type":"string"}
+  }
+}

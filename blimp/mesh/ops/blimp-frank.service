@@ -1,0 +1,17 @@
+[Unit]
+Description=Blimp Crew v2 - Frank host (Claude Code headless on the Boss's Claude plan, D-010; Toolgate is the only tool surface)
+After=network.target blimp-kernel.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/blimp/repo
+Environment=BLIMPG_DSN=postgresql://logan@/duke_data?port=5433
+Environment=BLIMP_SANDBOX=docker
+Environment=BLIMP_WORKTREE_ROOTS=%h/blimp/worktrees
+EnvironmentFile=-%h/blimp/secrets/kernel.env
+ExecStart=%h/blimp/mesh-venv/bin/python -m blimp.mesh.hosts.claude_host frank
+Restart=on-failure
+RestartSec=15
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,16 @@
+[Unit]
+Description=Blimp Crew v2 - Hermes adapter (Deck turns -> Hermes Agent gateway webhook, HMAC-signed)
+After=network.target blimp-kernel.service hermes-gateway.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/blimp/repo
+Environment=BLIMPG_DSN=postgresql://logan@/duke_data?port=5433
+# HERMES_WEBHOOK_SECRET lives here, never in git
+EnvironmentFile=%h/blimp/secrets/hermes-webhook.env
+ExecStart=%h/blimp/mesh-venv/bin/python -m blimp.mesh.hosts.hermes_host
+Restart=on-failure
+RestartSec=15
+
+[Install]
+WantedBy=default.target

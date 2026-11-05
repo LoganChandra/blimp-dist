@@ -1,0 +1,14 @@
+[Unit]
+Description=Duke heartbeat every 20 min, 08:00-23:00 (Asia/Kuala_Lumpur system time)
+
+[Timer]
+# :00/:20/:40 for hours 08-22, plus 23:00 — last fire is exactly 23:00.
+OnCalendar=*-*-* 08..22:00/20:00
+OnCalendar=*-*-* 23:00:00
+# Daytime-only: a missed slot (PC asleep) is just skipped, not replayed at wake
+# — a stale 20-min pulse is itself a heartbeat alert, so Persistent= stays off.
+Persistent=false
+RandomizedDelaySec=30s
+
+[Install]
+WantedBy=timers.target

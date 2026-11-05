@@ -1,0 +1,1 @@
+"""Blimp Crew v2 — Deck kernel package (deterministic, zero LLM)."""
