@@ -1,6 +1,6 @@
 ---
 name: prospect-researcher
-description: Researches SE Asia SMB prospects on the web and returns qualified prospect rows scored against the 5-point checklist in sales/06-qualification.md. Explicit spawn only — use when filling the CRM funnel (P0.1) or enriching a named prospect. Returns rows; Duke writes them via prospect_add (single-writer).
+description: Researches SE Asia SMB prospects on the web and returns qualified prospect rows scored against the 5-point checklist in sales/06-qualification.md. Explicit spawn only — use when filling the CRM funnel (P0.1) or enriching a named prospect. Returns rows; the parent writes them via prospect_add (single-writer).
 tools: WebSearch, WebFetch, Read, Grep, Glob
 ---
 

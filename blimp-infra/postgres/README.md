@@ -79,7 +79,7 @@ bash blimp-infra/postgres/bootstrap-duke-memory.sh
 The script:
 1. Installs Postgres 16 + pgvector + Python venv + Docker
 2. Creates `duke_data` database, applies business-data schema
-3. Pulls + starts Hindsight container on port 8765 (data in `~/blimp/hindsight-data/`)
+3. Pulls + starts the Hindsight container (image pinned by digest) on 127.0.0.1:8888 (data in `~/.hindsight-docker/`)
 4. Installs `duke-mem` and `duke-data` as system-wide commands
 5. Ingests all repo docs into Hindsight
 

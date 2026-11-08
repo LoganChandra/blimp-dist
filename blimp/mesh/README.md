@@ -20,13 +20,13 @@ Implementation of `blimp-v2-spec.md` (v0.1, 2026-09-28, by Meera). This is the *
 | `prompts/L0–L2/`, `prompts/services/` | The prompt stack as code: constitution, 3 identities, protocol card, all 9 service prompts | §12 |
 | `policies/*.yaml` | models, budgets, wake rules, authority — all R4, the Boss applies | §7.6, §14.5 |
 | `schemas/*.json` | JSON Schema 2020-12: speech-act, contract v2, handoff, completion, verification, turn-request | §16 |
-| `tests/test_kernel.py` | **66 spec-conformance tests, all green** | whole spec |
+| `tests/` | spec-conformance + API tests (311 collected 2026-11-06; run them, don't trust this count) | whole spec |
 
 ## Run the tests
 
 ```bash
-uv venv /tmp/meshenv && uv pip install --python /tmp/meshenv/bin/python psycopg pytest fastapi uvicorn
-/tmp/meshenv/bin/python blimp/mesh/tests/test_kernel.py
+# one-time: uv venv ~/blimp/mesh-venv && uv pip install --python ~/blimp/mesh-venv/bin/python psycopg pytest fastapi uvicorn
+~/blimp/mesh-venv/bin/pytest blimp/mesh -q   # uses the isolated blimp_mesh_test DB
 ```
 
 ## Apply the schema (requires nothing else running)
@@ -46,6 +46,6 @@ psql -p 5433 -d duke_data -f blimp/mesh/migrations/0001_mesh_schema.sql
 
 ## Gate 0 status
 
-Nothing here is **deployed**. Per spec §0, the DR-7 infrastructure freeze runs to ~2026-10-11;
+Status 2026-11-06: `blimp-bridge` and `blimp-deck` run as services from `~/blimp/mesh-live` (see docs/architecture.md); the rest below is not deployed. Per spec §0, the DR-7 infrastructure freeze runs to ~2026-10-11;
 D-008 (kernel supersedes D-006) needs the Boss's ratification before this runs as a service.
 The code and tests above are the buildable artifact awaiting those decisions (§25 G-1..G-15).

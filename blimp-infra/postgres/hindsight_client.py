@@ -182,7 +182,8 @@ def init_bank() -> dict:
 
 
 def get_bank() -> dict:
-    return _get(_bank_path())
+    # Hindsight 0.10+ removed GET /banks/{id} (405); the bank's settings live at /config.
+    return _get(_bank_path("/config"))
 
 
 def bank_stats() -> dict:
