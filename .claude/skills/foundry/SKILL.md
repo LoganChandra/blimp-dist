@@ -1,10 +1,6 @@
 ---
 name: foundry
-description: >-
-  The Blimp venture-building operating doctrine (the "Foundry"). Load at the
-  start of ANY substantive build, venture, or ops task. Indexes the estate
-  constitution (C1-C8), the 5 mechanisms, and routes to the granular foundry-*
-  skills. Merged from the an earlier venture estate, 2026-06-16.
+description: "The Blimp venture-building doctrine (the Foundry): constitution C1-C8, the 5 mechanisms, and the router to the granular foundry-* skills. Load when starting a venture, a build for one, or an ops decision that touches the constitution (pricing, entity, margin, distribution, claims)."
 ---
 
 # The Foundry — Duke & Frank's operating doctrine

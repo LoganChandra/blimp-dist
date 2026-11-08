@@ -19,6 +19,8 @@ All schedules are **Asia/Kuala_Lumpur** (the WSL system timezone), so bare
 | `overnight.timer` | `heartbeat/overnight.sh` | daily 00:30 | `Persistent=true` | draft-only headless shift, demand-gated |
 | `heartbeat.timer` | `heartbeat/heartbeat.sh` | every 20 min, 08:00–23:00 | `Persistent=false` | daytime pulse, zero tokens; missed slot is itself an alert |
 | `evals.timer` | `evals/run-evals.sh` | weekly Sun 04:00 | `Persistent=true` | incident-regression suite, read-only harness |
+| `blimp-hq-feeds.timer` | `discord-hq/feeds/hq_feeds.py all` | every 5 min | `Persistent=true` | Discord #prs, #deploys, #alerts + #general to brain; plain script, no model |
+| `blimp-daily-idea.timer` | `discord-hq/feeds/daily_idea.py` | daily 08:00 | `Persistent=true` | #ideas; headless Claude on the subscription, web search only; usage in `~/.cache/blimp-hq-feeds/ideas-log.jsonl` |
 
 Each `*.service` is `Type=oneshot` with a `WorkingDirectory` next to its script
 and appends stdout+stderr to `~/blimp/logs/<job>.log`. `dreams.sh` also keeps its

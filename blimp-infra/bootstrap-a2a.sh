@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # bootstrap-a2a.sh — one-shot A2A infrastructure bring-up.
 #
+# RETIRED (D-001/D-006): the broker and orchestrator this installs are retired. Do not run.
+# A2A is pull-only Postgres rows read through the blimp-brain MCP. Kept for reference only.
+echo "bootstrap-a2a.sh is retired (D-001/D-006): A2A needs no service now. Nothing done."; exit 0
+#
 # Prerequisites:
 #   1. bootstrap-hermes.sh has been run (hermes installed, gateway running)
 #   2. boot-text-blimp.sh has been run (duke in tmux)

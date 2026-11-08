@@ -46,3 +46,31 @@ watch the Stop hook block exactly once. The scratch settings never leave
   the `/tmp` marker makes once-per-turn hold either way.
 - Stop and UserPromptSubmit entries take no `matcher` (they always fire);
   PreToolUse matches the tool name.
+
+## Brain capture (v2, 2026-11-05)
+
+| File | Hook event | Does |
+|---|---|---|
+| `stop-brain-capture.py` | Stop | Writes every Discord exchange (what someone sent + the agent's replies) to the team brain as one Hindsight document, `Name (time UTC): text`, `document_id = discord:<agent>:<first message id>`. Names come from `brain-capture.json`. Secrets are stripped first. Forks, frees the hook's pipes and returns 0 at once; failures go to `~/.cache/blimp-brain-capture/capture.log`. |
+| `sessionstart-team-context.py` | SessionStart | Blimp agents only: prints the other agents' latest exchanges (DMs excluded) and a one-line alert if the last capture failed. |
+| `install-brain-capture.sh` | — | the Boss runs it at his keyboard (rail #8). Adds both hooks, backfills since 2026-09-02. Undo: `cp ~/.claude/settings.json.bak-brain-capture ~/.claude/settings.json`. |
+
+Tests: `~/blimp/mesh-venv/bin/pytest blimp-infra/hooks/test_stop_brain_capture.py` (99 cases: speakers, grouping,
+mid-turn messages, fake messages in tool output, clock skew, long turns, idempotency, locking, backfill parity,
+40+ secret formats and as many ordinary sentences that must survive). Reviewed by a fresh-context critic over six
+passes until no leak remained. Known limits: only Claude Code agents (Duke, Frank) are captured, not Hermes;
+a letters-only password with an apostrophe in it is kept.
+
+## Hermes parity and restart-resume (2026-11-06)
+
+All three agents get the same brain hooks (the Boss: "all of you are equal"):
+
+| | Duke, Frank (Claude Code) | Hermes (Hermes Agent) |
+|---|---|---|
+| Capture every Discord exchange | Stop hook -> `stop-brain-capture.py` | plugin `hermes/blimp-brain` post_llm_call -> `hermes-brain-capture.py` (reads `~/.hermes/state.db` read-only) |
+| Team brief at session start | SessionStart hook -> `sessionstart-team-context.py` | same plugin, pre_llm_call on the first turn -> same script |
+| Restart keeps the thread | `agent/launch.sh` resumes the last real Discord session | native: hermes-gateway keeps sessions in `state.db` across restarts |
+
+Headless runs (`claude -p`, evals) are skipped by both the capture and the resume picker: some feed in
+fake Discord messages. One installer for all of it: `install-brain-capture.sh` (the Boss's paste, rail 8).
+Tests: `pytest blimp-infra/hooks blimp-infra/agent`.

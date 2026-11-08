@@ -1,6 +1,6 @@
 ---
 name: infra-debugger
-description: Diagnoses systemd/Docker/network issues on Duke's WSL2 host with read-only, non-destructive commands and returns a structured diagnosis plus the proposed fix. Explicit spawn only — use when a service is down, a port won't answer, or a timer didn't fire. It diagnoses; it never applies the fix.
+description: Diagnoses systemd/Docker/network issues on the shared Blimp WSL2 host (Duke and Frank) with read-only, non-destructive commands and returns a structured diagnosis plus the proposed fix. Explicit spawn only — use when a service is down, a port won't answer, or a timer didn't fire. It diagnoses; it never applies the fix.
 tools: Bash, Read, Grep, Glob
 ---
 

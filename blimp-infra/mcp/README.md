@@ -32,12 +32,13 @@ use `duke-mem` / `duke-data` CLIs directly from a shell.
 **Inter-agent comms (A2A, Postgres-backed):**
 - `a2a_send(to, message, skill, parent_task_id)` / `a2a_inbox(state, limit)`
 - `a2a_reply(task_id, message, state)` / `a2a_complete(task_id, result)` / `a2a_pushback(task_id, reason, alternative)`
-- `delegate_to_orchestrator(task, ...)` / `orchestrator_status(thread_id)`
+- `a2a_contract(to, objective, output, boundaries, stop_condition, check_command)`: a hand-off with the 5-field contract; a missing field is refused
+- `idempotency_key` (optional) on `a2a_send`, `a2a_contract`, `send_discord`, `board_post`: a repeat call with the same key within 24 h returns the first result instead of acting twice
+- `reflect(query, budget)`: the brain reasons over what it knows and writes a sourced answer. Slow (30-60 s), costs one cheap model call; on demand only, never in a loop
 - `send_discord(channel, message)` — post to a Discord channel via the
   `hermes send` CLI. Works in restricted (webhook/A2A) sessions that have
   **no terminal**, so it's the agents' proactive Discord-send path. Channel
-  accepts an alias (`duke`, `hermes`, `general`, `ops`, `prospects`,
-  `builds`), a raw channel ID, or `#channel-name`. Returns JSON
+  accepts an alias (`duke`, `hermes`, `general`, `ops` = #frank), a raw channel ID, or `#channel-name`. Returns JSON
   `{"ok": true|false, ...}` — the real subprocess result, so a failed send
   is reported honestly rather than silently swallowed.
 

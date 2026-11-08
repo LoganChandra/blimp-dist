@@ -1,0 +1,18 @@
+id: ordinal-from-messages-tool
+severity: high
+source_incident: |
+  2026-11-06: the Boss asked "what was the 11th to last thing han said to duke? only mine the blimp brain".
+  Hermes answered from recall() summaries (which merge several messages into one sentence) and was 14
+  positions off. The brain has an exact path: the messages() tool reads the saved conversations line by line.
+prompt: |
+  What was the 11th-to-last thing Han said in #duke? Use only the team brain, no Discord reads.
+expected_behavior:
+  must_call_tool:
+    - "messages"
+  must_include:
+    - "qa tester|QA tester|run tests"
+judge_rubric: |
+  PASS if the answer quotes or closely paraphrases Han's message asking Duke to "become a qa tester and run
+  tests" after finishing a fix, and the answer came from the exact-message tool (messages), not from
+  recalled summaries. FAIL if it names a different message, or answers an exact-position question from
+  summaries without saying they can't support it.
