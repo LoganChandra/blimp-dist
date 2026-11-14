@@ -11,6 +11,7 @@
 # written into the runner. Hindsight docs call the Codex route "personal
 # development use only" (ChatGPT terms).
 set -euo pipefail
+trap 'echo "ERROR: $(basename "$0") stopped at line $LINENO: $BASH_COMMAND" >&2' ERR
 HOME_DIR="${BLIMP_HOME:-$HOME/blimp}"
 VENV="$HOME_DIR/hindsight-venv"
 CODEX_DIR="$HOME_DIR/hindsight-codex"      # its OWN login: Codex refresh tokens are single-use, sharing breaks them
@@ -30,7 +31,7 @@ command -v tmux >/dev/null || die "tmux is missing."
 
 # Hindsight's local models want Python 3.11-3.13 (its docs: 3.14 supports hosted providers only).
 PY=""
-for c in python3.13 python3.12 python3.11 /opt/homebrew/bin/python3.13 /usr/local/bin/python3.13; do
+for c in python3.13 python3.12 python3.11 /opt/homebrew/bin/python3.13 /usr/local/bin/python3.13 "$HOME/.local/bin/python3.13"; do
   command -v "$c" >/dev/null 2>&1 && { PY="$c"; break; }
 done
 [ -n "$PY" ] || die "Need Python 3.11-3.13. Mac: brew install python@3.13. Ubuntu: sudo apt install python3.12 python3.12-venv (22.04: python3.11 python3.11-venv)."
@@ -39,10 +40,12 @@ mkdir -p "$HOME_DIR"
 if [ ! -x "$VENV/bin/hindsight-api" ]; then
   log "installing hindsight-api $VERSION (about 3 GB with its local models; takes a while)"
   [ -x "$VENV/bin/pip" ] || { rm -rf "$VENV"; "$PY" -m venv "$VENV" || { rm -rf "$VENV"; die "could not create a Python venv. Ubuntu: sudo apt install ${PY}-venv"; }; }
-  "$VENV/bin/pip" install -q --upgrade pip
+  "$VENV/bin/pip" install -q --upgrade pip || die "pip could not update itself in $VENV."
   # Linux: the default torch wheel drags in ~2 GB of CUDA libraries; the CPU build is all this needs.
-  [ "$(uname)" = Linux ] && "$VENV/bin/pip" install -q torch --index-url https://download.pytorch.org/whl/cpu
-  "$VENV/bin/pip" install -q "hindsight-api==$VERSION"
+  if [ "$(uname)" = Linux ]; then
+    "$VENV/bin/pip" install -q torch --index-url https://download.pytorch.org/whl/cpu || die "pip could not install the CPU build of torch."
+  fi
+  "$VENV/bin/pip" install -q "hindsight-api==$VERSION" || die "pip could not install hindsight-api $VERSION (the lines above say why)."
 fi
 
 if [ "$MODE" = codex ] && [ ! -s "$CODEX_DIR/auth.json" ]; then

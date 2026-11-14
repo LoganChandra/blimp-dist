@@ -321,9 +321,23 @@ else
   PKGS="curl ca-certificates git build-essential python3 python3-pip python3-venv jq tmux unzip"
   apt_go() { sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $PKGS; }
   ui_run "System packages" apt_go || stop "the system packages did not install." "Run: sudo apt-get update   then setup again."
-  if [ "$(cfg_get BLIMP_MEMORY)" = pip ] && ! command -v python3.13 python3.12 python3.11 >/dev/null 2>&1; then
-    py_new() { sudo apt-get install -y -qq python3.12 python3.12-venv || sudo apt-get install -y -qq python3.11 python3.11-venv; }
-    ui_run "Python 3.11+ for the memory" py_new || stop "no Python 3.11 or newer." "Ubuntu 22.04 or newer is needed."
+  # The memory's local models need Python 3.11-3.13 (Hindsight docs). Newer Ubuntu
+  # (26.04) ships only 3.14, so fall back to uv's standalone Python 3.13.
+  export PATH="$HOME/.local/bin:$PATH"
+  have_py=0; for v in 3.13 3.12 3.11; do command -v "python$v" >/dev/null 2>&1 && have_py=1 && break; done
+  if [ "$(cfg_get BLIMP_MEMORY)" = pip ] && [ "$have_py" = 0 ]; then
+    py_new() {
+      local v
+      for v in 3.13 3.12 3.11; do
+        apt-cache show "python$v-venv" >/dev/null 2>&1 && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "python$v" "python$v-venv" && return 0
+      done
+      local uvd="$BLIMP_HOME/uv"; mkdir -p "$uvd" "$HOME/.local/bin"
+      [ -x "$uvd/uv" ] || curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="$uvd" UV_NO_MODIFY_PATH=1 sh || return 1
+      UV_PYTHON_INSTALL_DIR="$BLIMP_HOME/python" "$uvd/uv" python install 3.13 || return 1
+      ln -sf "$(UV_PYTHON_PREFERENCE=only-managed UV_PYTHON_INSTALL_DIR="$BLIMP_HOME/python" "$uvd/uv" python find 3.13)" "$HOME/.local/bin/python3.13"
+      "$HOME/.local/bin/python3.13" -m venv --help >/dev/null
+    }
+    ui_run "Python 3.13 for the memory" py_new || stop "Python 3.11-3.13 could not be installed." "Check the internet connection, then run setup again."
   fi
   if [ "$AI" = codex ] && { ! command -v node >/dev/null || [ "$(node -v | tr -d v | cut -d. -f1)" -lt 22 ]; }; then
     node_go() { curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y -qq nodejs; }
