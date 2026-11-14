@@ -106,6 +106,14 @@ if ! dpkg -l "postgresql-$PG_VER" >/dev/null 2>&1 || { [ "$HS_MODE" != pip ] && 
     || warn "no pgvector package for pg$PG_VER - CREATE EXTENSION vector may fail"
   sudo usermod -aG docker "$USER_NAME" || true
 fi
+# A postgres that was already installed (CI runners, earlier installs) skips the
+# block above, so check pgvector on its own.
+if [ ! -f "/usr/share/postgresql/$PG_VER/extension/vector.control" ]; then
+  sudo apt-get update -y >/dev/null
+  sudo apt-get install -y "postgresql-$PG_VER-pgvector" 2>/dev/null \
+    || sudo apt-get install -y postgresql-pgvector 2>/dev/null \
+    || warn "no pgvector package for pg$PG_VER - CREATE EXTENSION vector may fail"
+fi
 ok "system packages present (postgres $PG_VER)"
 
 # Ubuntu 26.04 has no sysvinit wrapper for postgresql, so `service postgresql
