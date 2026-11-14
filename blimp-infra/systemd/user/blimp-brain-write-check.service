@@ -1,0 +1,7 @@
+[Unit]
+Description=Blimp: brain write check (SQL only, no model calls); posts to #alerts only on a problem
+
+[Service]
+Type=oneshot
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/python3 %h/blimp/repo/blimp-infra/brain-maint/write_check.py --alert

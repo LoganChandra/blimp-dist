@@ -1,6 +1,6 @@
 ---
 name: simplify-first
-description: Use BEFORE writing any new code, component, or dependency — a 6-rung ladder that stops at the first option that holds (does this need to exist? already in the codebase? stdlib? native platform feature? installed dependency? one line?) before reaching for something bigger. Benchmarked externally at ~54% less code and ~20% cheaper with zero safety regression (source — DietrichGebert/ponytail, adopted 2026-07-08 into our own doctrine).
+description: "Use BEFORE writing any new code, component, or dependency: a 6-rung ladder that stops at the first option that holds (does this need to exist? already in the codebase? stdlib? native platform feature? installed dependency? one line?) before reaching for something bigger."
 ---
 
 # /simplify-first — stop at the first rung that holds

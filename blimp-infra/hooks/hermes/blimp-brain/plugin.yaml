@@ -1,0 +1,3 @@
+name: blimp-brain
+version: "1.0"
+description: Team-brain parity with Duke and Frank. First turn of a session gets the team brief; every turn is captured into the brain.

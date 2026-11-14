@@ -2,7 +2,7 @@
 topic: architecture
 audience: the Boss + Duke + Hermes + Frank + any future agent runtime
 summary: The full current system architecture of the Blimp estate — the 3-agent team, the shared brain, the A2A mesh, the autonomous loops, the safety guards, backup/DR, the voice pipeline, and the Foundry doctrine that governs it all.
-last_updated: 2026-07-06
+last_updated: 2026-11-06
 ---
 
 # Blimp — System Architecture
@@ -16,6 +16,23 @@ last_updated: 2026-07-06
 > **Honesty note (C8).** This doc records *reality as of 2026-07-06*, warts
 > included. When the ground truth changes,
 > update this doc; don't let it become aspirational.
+
+> **What's actually running (checked 2026-11-06).** Sections below were written in
+> July and some describe things that have since been switched off. Ground truth:
+> - **Live:** Hindsight brain on `:8888` (image pinned by digest, **API 1.2.0 since 2026-11-06**, extraction
+>   model `deepseek/deepseek-v4.1-flash-1017` (thinking low, cheapest provider; blimp-infra/postgres/brain-model.env), local reranker `hindsight-ai/hs-rerank-1`, embedder bge-small;
+>   gate: `blimp-infra/brain-eval/exam`, 39/40); Postgres
+>   `duke_data` on `:5433`; blimp-brain MCP; Crew v2 `blimp-bridge` + `blimp-deck`
+>   (no LLM inside); `hermes-gateway`; timers: `backup`, `blimp-sweep`, service `blimp-resume-watcher` (answers the idle-resume prompt, no model),
+>   `blimp-idle-burn` (zero-token probe), `blimp-weekly-sync`.
+> - **Retired (July, D-001/D-006):** the A2A broker (`:9091`) and the orchestrator
+>   (`:9092`). A2A now means rows in `a2a_messages` read with `a2a_inbox` (pull-only).
+> - **Built but off (zero idle spend rule):** heartbeat, dreams, overnight and eval
+>   timers; voice. Heartbeat's last run was 2026-09-02.
+> - **Removed 2026-11-06:** `recall_guard.py` (built, never wired; in git history if wanted). Orchestrator MCP tools and broker heartbeat checks removed the same day.
+> - **Hooks installed:** only the Discord reply guard. Brain capture v2 (PR #16) is
+>   installed by the Boss with `bash $HOME/blimp/repo/blimp-infra/hooks/install-brain-capture.sh`.
+>   The prod-deploy guard hook stays uninstalled by the Boss's choice.
 
 Blimp is two things at once:
 1. **An AI-automation agency** for SE Asia SMBs (the strategy/sales/build docs), and
@@ -86,7 +103,6 @@ server that all three agents register identically.
 - **KV state** — `state_get`, `state_set`
 - **Activity** — `activity`
 - **A2A** — `a2a_send`, `a2a_inbox`, `a2a_reply`, `a2a_complete`, `a2a_pushback`
-- **Orchestrator** — `delegate_to_orchestrator`, `orchestrator_status`
 - **Discord** — `send_discord` (posts via the `hermes send` CLI so webhook/A2A
   sessions with no terminal can still reach Discord)
 
@@ -113,7 +129,7 @@ identical.
 
 ---
 
-## 3. Inter-agent comms — the A2A mesh
+## 3. Inter-agent comms — the A2A mesh (broker and orchestrator retired July 2026, see the status box at the top)
 
 Agents task each other over a **JSON-RPC A2A layer** (Linux Foundation
 Agent2Agent v1.0), all backed by the same `duke_data` Postgres.
@@ -134,7 +150,7 @@ Agent2Agent v1.0), all backed by the same `duke_data` Postgres.
 - **Orchestrator** (`blimp-infra/orchestrator/supervisor.py`, `127.0.0.1:9092`) —
   a pure-Python **generator-verifier** supervisor. Loop: Hermes designs → Duke
   verifies → `APPROVED` / `NEEDS_REVISION` (loop) / `BLOCKED_NEEDS_LOGAN`. Hard
-  caps: `max_turns=6`, `usd_budget=$1.00`. Callable via `delegate_to_orchestrator`.
+  caps: `max_turns=6`, `usd_budget=$1.00`. Its MCP tools were removed 2026-11-06.
 - **Discord mirror** (`blimp-infra/a2a/discord_mirror.py`) — read-only visibility:
   posts each A2A state transition into the *recipient's* Discord channel, deduped
   via an `a2a_discord_posts` outbox, storing the returned message id as

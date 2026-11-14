@@ -58,12 +58,12 @@ MAX_TURNS="${MAX_TURNS:-10}"
 MIN_CASES=20
 
 # Read-only tools the eval agent may actually use.
-ALLOWED_TOOLS="Read,Grep,Glob,mcp__blimp-brain__recall,mcp__blimp-brain__recent,mcp__blimp-brain__tasks,mcp__blimp-brain__prospects,mcp__blimp-brain__quotes,mcp__blimp-brain__memory_stats,mcp__blimp-brain__state_get,mcp__blimp-brain__a2a_inbox,mcp__plugin_discord_discord__fetch_messages"
+ALLOWED_TOOLS="Read,Grep,Glob,mcp__blimp-brain__recall,mcp__blimp-brain__recent,mcp__blimp-brain__tasks,mcp__blimp-brain__prospects,mcp__blimp-brain__quotes,mcp__blimp-brain__memory_stats,mcp__blimp-brain__state_get,mcp__blimp-brain__a2a_inbox,mcp__blimp-brain__messages,mcp__plugin_discord_discord__fetch_messages"
 
 # Mutating tools: hard-denied (deny beats any allow rule, incl. Bash(*) in
 # settings.local.json) so a scheduled eval can never write the brain, post to
 # Discord, run shell, or edit files.
-DISALLOWED_TOOLS="Bash,Edit,Write,NotebookEdit,Task,WebFetch,WebSearch,mcp__blimp-brain__remember,mcp__blimp-brain__log_message,mcp__blimp-brain__task_add,mcp__blimp-brain__task_update,mcp__blimp-brain__prospect_add,mcp__blimp-brain__prospect_update,mcp__blimp-brain__quote_log,mcp__blimp-brain__state_set,mcp__blimp-brain__a2a_send,mcp__blimp-brain__a2a_reply,mcp__blimp-brain__a2a_complete,mcp__blimp-brain__a2a_pushback,mcp__blimp-brain__send_discord,mcp__blimp-brain__delegate_to_orchestrator,mcp__plugin_discord_discord__reply,mcp__plugin_discord_discord__edit_message,mcp__plugin_discord_discord__react,mcp__plugin_discord_discord__download_attachment"
+DISALLOWED_TOOLS="Bash,Edit,Write,NotebookEdit,Task,WebFetch,WebSearch,mcp__blimp-brain__remember,mcp__blimp-brain__log_message,mcp__blimp-brain__task_add,mcp__blimp-brain__task_update,mcp__blimp-brain__prospect_add,mcp__blimp-brain__prospect_update,mcp__blimp-brain__quote_log,mcp__blimp-brain__state_set,mcp__blimp-brain__a2a_send,mcp__blimp-brain__a2a_reply,mcp__blimp-brain__a2a_complete,mcp__blimp-brain__a2a_pushback,mcp__blimp-brain__send_discord,mcp__plugin_discord_discord__reply,mcp__plugin_discord_discord__edit_message,mcp__plugin_discord_discord__react,mcp__plugin_discord_discord__download_attachment"
 
 usage() {
   sed -n '2,36p' "$0" | sed 's/^# \{0,1\}//'
@@ -117,14 +117,16 @@ fi
 # environment checks
 # ------------------------------------------------------------------
 PY=""
-for cand in /usr/bin/python3 python3; do
-  if command -v "$cand" >/dev/null 2>&1 && "$cand" -c 'import yaml' >/dev/null 2>&1; then
+# The judge needs httpx as well as yaml. A python without httpx crashed judge_case.py silently and every
+# judge_rubric case failed with an empty reason (found 2026-11-06), so require both.
+for cand in "$HOME/blimp/mesh-venv/bin/python" "$HOME/blimp/duke-venv/bin/python" /usr/bin/python3 python3; do
+  if command -v "$cand" >/dev/null 2>&1 && "$cand" -c 'import yaml, httpx' >/dev/null 2>&1; then
     PY="$(command -v "$cand")"
     break
   fi
 done
 if [ -z "$PY" ]; then
-  err "no python3 with PyYAML found (apt: python3-yaml)"
+  err "no python3 with PyYAML + httpx found (apt: python3-yaml python3-httpx, or ~/blimp/mesh-venv)"
   exit 2
 fi
 
@@ -362,6 +364,7 @@ run_one_case() { # $1 = case file
     rm -f "$rfile_tmp" "$tfile_tmp"
     judge_pass="$(jq -r '.pass // false' <<<"$judge_out" 2>/dev/null)"
     judge_reason="$(jq -r '.reason // "no reason given"' <<<"$judge_out" 2>/dev/null)"
+    [ -n "$judge_out" ] || judge_reason="judge crashed (no output): run $PY $EVALS_DIR/judge_case.py by hand"
     [ "$judge_pass" = "true" ] || failures+=("judge FAIL: $judge_reason")
   fi
 

@@ -1,48 +1,26 @@
 #!/usr/bin/env bash
-# Boot Blimp Duke in WSL tmux session 'duke'. Called by boot-blimp.bat.
-#
-# Uses DISCORD_STATE_DIR to isolate Duke's channels-plugin config from other-agent's (<your-product>).
-# <your-product> other-agent uses the default ~/.claude/channels/discord/.
-# Blimp Duke uses ~/blimp/discord-state/ with its own .env, access.json, etc.
+# Start the agent (Claude Code + the Discord plugin) in the background, in tmux
+# session 'duke'. Called by setup.sh (--start, the Mac login item, START-BLIMP.bat
+# and blimp start). Safe to run again: it restarts the agent.
 set -e
+H="${BLIMP_HOME:-$HOME/blimp}"
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
+STATE="$H/discord-state"
 
-echo "[duke boot] killing stale tmux session"
 tmux kill-session -t duke 2>/dev/null || true
-tmux kill-session -t blimp 2>/dev/null || true  # legacy name cleanup
-sleep 2
-
-echo "[duke boot] ensuring Blimp state dir exists"
-mkdir -p ~/blimp/discord-state/approved ~/blimp/discord-state/inbox
-
-# If Blimp's state dir doesn't have a .env yet, seed it from ~/blimp/.env (which has the token)
-if [[ ! -f ~/blimp/discord-state/.env ]]; then
-  grep -E '^DISCORD_BOT_TOKEN=' ~/blimp/.env > ~/blimp/discord-state/.env 2>/dev/null || true
-  chmod 600 ~/blimp/discord-state/.env 2>/dev/null || true
+mkdir -p "$STATE/approved" "$STATE/inbox"
+if [ ! -f "$STATE/.env" ]; then
+  grep -E '^DISCORD_BOT_TOKEN=' "$H/.env" > "$STATE/.env" || { echo "No DISCORD_BOT_TOKEN in $H/.env: run setup.sh"; exit 1; }
+  chmod 600 "$STATE/.env"
 fi
-
-# Seed access.json if missing
-if [[ ! -f ~/blimp/discord-state/access.json ]]; then
-  cat > ~/blimp/discord-state/access.json <<'JSON'
-{
-  "dmPolicy": "open",
-  "allowFrom": ["<ID>"],
-  "groups": {},
-  "pending": {}
-}
-JSON
+if [ ! -f "$STATE/access.json" ]; then
+  owner="$(grep -E '^DISCORD_OWNER_USER_ID=' "$H/.env" | tail -1 | cut -d= -f2- | tr -cd '0-9')"
+  [ -n "$owner" ] || { echo "No DISCORD_OWNER_USER_ID in $H/.env: run setup.sh"; exit 1; }
+  printf '{ "dmPolicy": "allowlist", "allowFrom": ["%s"], "groups": {}, "pending": {} }\n' "$owner" > "$STATE/access.json"
 fi
+[ -f "$REPO/CLAUDE.local.md" ] || bash "$REPO/blimp-infra/agent/set-identity.sh" duke >/dev/null
 
-echo "[duke boot] launching in tmux (DISCORD_STATE_DIR=~/blimp/discord-state, DUKE_CHANNEL=discord)"
-cd ~/blimp/repo 2>/dev/null || cd ~
-
-# DUKE_CHANNEL=discord arms the P1.2 enforcement hooks (blimp-infra/hooks/).
-# Headless runs (Dreams, evals, claude -p) never export it, so the hooks
-# exit 0 there and can never wedge an unattended session.
-tmux new-session -d -s duke "export PATH=\$HOME/.bun/bin:\$HOME/.npm-global/bin:\$HOME/.local/bin:\$PATH; export DISCORD_STATE_DIR=\$HOME/blimp/discord-state; export DUKE_CHANNEL=discord; set -a; source ~/blimp/.env 2>/dev/null; set +a; cd ~/blimp/repo && claude --model claude-sonnet-5-5 --effort medium --channels plugin:discord@claude-plugins-official"
-sleep 6
-
-echo "[duke boot] tmux session check:"
-tmux ls 2>&1 || echo "no tmux sessions"
-echo
-echo "[duke boot] last 10 lines from pane:"
-tmux capture-pane -t duke -p -S -10 2>&1 || echo "capture failed"
+# Homebrew's tools (Mac) and the user's own installs must be on PATH inside tmux too.
+P="\$HOME/.bun/bin:\$HOME/.local/bin:\$HOME/.npm-global/bin:/opt/homebrew/bin:/usr/local/bin:\$PATH"
+tmux new-session -d -s duke -c "$REPO" \
+  "export CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000 BLIMP_FRESH=${BLIMP_FRESH:-} BLIMP_AGENT=duke BLIMP_HOME='$H' PATH=\"$P\" DISCORD_STATE_DIR='$STATE' DUKE_CHANNEL=discord; set -a; . '$H/.env'; set +a; bash '$REPO/blimp-infra/agent/launch.sh' --model ${BLIMP_CLAUDE_MODEL:-claude-sonnet-5-5} --effort medium --channels plugin:discord@claude-plugins-official"

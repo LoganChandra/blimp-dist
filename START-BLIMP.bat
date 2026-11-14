@@ -12,6 +12,10 @@ if errorlevel 1 (
   pause
   exit /b
 )
-wsl -d Ubuntu --cd "%~dp0." -e bash setup.sh
+rem After the first full setup, this just starts Blimp. To repair, run: bash setup.sh
+wsl -d Ubuntu --cd "%~dp0." -e bash -c "if grep -qx BLIMP_SETUP_DONE=yes ~/blimp/config.env 2>/dev/null; then bash setup.sh --start; else bash setup.sh; fi"
+echo.
+rem WSL stops Ubuntu (and the agent with it) once no window is attached, so this one stays open.
+wsl -d Ubuntu -e bash -c "tmux has-session -t duke 2>/dev/null || exit 0; echo; echo   Blimp is running. Keep this window open, minimised is fine: closing it stops Blimp.; while tmux has-session -t duke 2>/dev/null; do sleep 30; done; echo   Blimp stopped."
 echo.
 pause
