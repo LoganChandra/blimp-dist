@@ -10,7 +10,7 @@
 # The memory model's key is read from ~/blimp/.env each time it starts, never
 # written into the runner. Hindsight docs call the Codex route "personal
 # development use only" (ChatGPT terms).
-set -euo pipefail
+set -Eeuo pipefail
 trap 'echo "ERROR: $(basename "$0") stopped at line $LINENO: $BASH_COMMAND" >&2' ERR
 HOME_DIR="${BLIMP_HOME:-$HOME/blimp}"
 VENV="$HOME_DIR/hindsight-venv"
@@ -59,7 +59,8 @@ fi
 # The runner: same embedding/reranker settings as our own brain (brain-1.2.env).
 RUNNER="$HOME_DIR/run-hindsight.sh"
 envlines() {  # KEY=VALUE lines -> shell-safe assignments (values like JSON keep their quotes)
-  grep -E '^[A-Z_]+=' "$1" 2>/dev/null | while IFS= read -r l; do printf '%s=%q\n' "${l%%=*}" "${l#*=}"; done
+  [ -f "$1" ] || die "missing $1 (the memory's settings). Download Blimp again."
+  { grep -E '^[A-Z_]+=' "$1" || true; } | while IFS= read -r l; do printf '%s=%q\n' "${l%%=*}" "${l#*=}"; done
 }
 {
   echo '#!/usr/bin/env bash'

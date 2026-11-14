@@ -3,7 +3,7 @@
 # structured data (duke_data) and Hindsight's long-term memory (hindsight), and
 # Hindsight itself runs from pip. No sudo. Called by setup.sh; safe to re-run.
 # Works with macOS's own bash 3.2.
-set -euo pipefail
+set -Eeuo pipefail
 trap 'echo "ERROR: $(basename "$0") stopped at line $LINENO: $BASH_COMMAND" >&2' ERR
 REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 PG_DIR="$REPO_ROOT/blimp-infra/postgres"
