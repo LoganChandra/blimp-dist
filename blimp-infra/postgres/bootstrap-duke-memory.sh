@@ -181,7 +181,7 @@ if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$USER_NAM
 fi
 
 sudo -u postgres psql -d "$DB_NAME" -c "CREATE EXTENSION IF NOT EXISTS vector;" >/dev/null
-sudo -u postgres psql -d "$DB_NAME" -f "$PG_DIR/schema.sql" >/dev/null
+sudo -u postgres psql -d "$DB_NAME" >/dev/null < "$PG_DIR/schema.sql"  # stdin: postgres cannot read a 750 home dir
 ok "schema applied (tasks, prospects, pricing_log, project_state)"
 
 # Patch pg_hba.conf to use trust auth for local connections (single-user dev box).
