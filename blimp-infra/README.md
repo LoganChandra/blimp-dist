@@ -71,8 +71,8 @@ bash blimp-infra/boot-text-blimp.sh
 # 3. Hermes second (must be after step 1 — Hermes needs blimp-brain to exist)
 bash blimp-infra/bootstrap-hermes.sh
 
-# 4. A2A infrastructure (broker + orchestrator + webhook)
-bash blimp-infra/bootstrap-a2a.sh
+# 4. A2A needs no extra service: it is Postgres rows read through the blimp-brain MCP.
+#    (bootstrap-a2a.sh installs the RETIRED broker + orchestrator; don't run it.)
 ```
 
 Each is idempotent. Re-running any of them is safe.
@@ -102,7 +102,11 @@ You'll also need (one-time, in the Boss's browser, not scriptable):
 | `postgres/` | Memory stack — Hindsight + Postgres + duke-mem/duke-data CLIs |
 | `mcp/` | blimp-brain MCP server (the canonical tool surface) |
 | `patches/` | Workarounds for upstream bugs (currently: Hermes Discord adapter) |
-| `a2a/` | A2A broker — JSON-RPC 2.0 message routing + agent notifications (tmux/webhook) |\n| `orchestrator/` | Generator-Verifier supervisor loop — Hermes designs, Duke verifies |\n| `systemd/` | Systemd units for all services (a2a-broker, orchestrator, hermes-gateway) |\n| `bootstrap-a2a.sh` | One-shot A2A infrastructure bring-up — webhook, broker, orchestrator |\n| `secrets/` | API keys (gitignored, mode 600) |
+| `a2a/` | A2A broker — JSON-RPC 2.0 message routing + agent notifications (tmux/webhook) |
+| `orchestrator/` | Generator-Verifier supervisor loop — Hermes designs, Duke verifies |
+| `systemd/` | Systemd units for all services (a2a-broker, orchestrator, hermes-gateway) |
+| `bootstrap-a2a.sh` | One-shot A2A infrastructure bring-up — webhook, broker, orchestrator |
+| `secrets/` | API keys (gitignored, mode 600) |
 
 ## Tmux session map
 
@@ -199,11 +203,11 @@ Each Task Scheduler entry boots its own session. They don't interfere.
 ## Inter-agent comms: A2A protocol
 
 Duke and Hermes communicate via **A2A** (Agent2Agent Protocol, Linux Foundation,
-JSON-RPC 2.0 over HTTP). A broker (`:9091`) routes messages; an orchestrator
-(`:9092`) runs a Generator-Verifier loop (Hermes designs, Duke verifies).
+stored in Postgres and read through the `blimp-brain` MCP tools). Delivery is
+pull-only since 2026-07-07: each agent checks `a2a_inbox` itself. The broker
+(`:9091`) and orchestrator (`:9092`) were retired in 2026-07 (D-001); their code
+stays in `a2a/` and `orchestrator/` for reference only.
 
-- **Broker** — writes to Postgres, then pushes notifications to agents (zero idle tokens)
-- **Orchestrator** — supervisor loop with hard caps (turn count, USD budget)
 - **Webhook** — Hermes wakes on signed POST (`:8644/webhooks/a2a-task`)
 - **Duke** — woken via `tmux send-keys`
 

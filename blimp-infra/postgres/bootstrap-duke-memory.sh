@@ -23,7 +23,11 @@ HINDSIGHT_UI_PORT="${HINDSIGHT_UI_PORT:-9999}"
 # a Tailscale-interface bind — never 0.0.0.0.
 HINDSIGHT_BIND="${HINDSIGHT_BIND:-127.0.0.1}"
 HINDSIGHT_DATA="${HINDSIGHT_DATA:-$HOME/.hindsight-docker}"
-HINDSIGHT_IMAGE="${HINDSIGHT_IMAGE:-ghcr.io/vectorize-io/hindsight:latest}"
+# Pinned to the exact image the brain runs (API 1.2.0 since 2026-11-06). Upgrading is deliberate: run the
+# memory exam (blimp-infra/brain-eval/exam) on a clone first, then upgrade-brain.sh. The reranker and
+# embedder are set explicitly below so a new image's defaults can't silently swap them (or pick the
+# paid hosted provider, "hindsight"). Old pin (API 0.9.2): sha256:84ab276b8f501546deb6ea9c64a57291718b4e16a59dd9e02a02fdd5adfe9028
+HINDSIGHT_IMAGE="${HINDSIGHT_IMAGE:-ghcr.io/vectorize-io/hindsight@sha256:19d0c08f3df79acac29384826419a1ca158129e81ec527cdcbd8c97ff4ef76da}"
 VENV="$HOME/blimp/duke-venv"
 USER_NAME="$(whoami)"
 
@@ -50,8 +54,10 @@ HINDSIGHT_LLM_MODEL="${HINDSIGHT_LLM_MODEL:-deepseek/deepseek-v4-flash}"
 # Hermes launcher can pick it up later. the Boss can edit ~/blimp/.env any time.
 HERMES_DUKE_MODEL="${HERMES_DUKE_MODEL:-qwen/qwen3-max}"
 
+# HINDSIGHT_MODE=pip (set by the public setup for Codex users): Hindsight runs from pip with a Codex login, no Docker, no OpenRouter key.
+HS_MODE="${HINDSIGHT_MODE:-docker}"
 HINDSIGHT_API_KEY="${OPENROUTER_API_KEY:-${HINDSIGHT_API_LLM_API_KEY:-}}"
-if [ -z "$HINDSIGHT_API_KEY" ]; then
+if [ "$HS_MODE" != pip ] && [ -z "$HINDSIGHT_API_KEY" ]; then
   echo "ERROR: OPENROUTER_API_KEY is not set."
   echo "Set it in your shell:  export OPENROUTER_API_KEY=sk-or-v1-..."
   echo "Or add to ~/blimp/.env:  OPENROUTER_API_KEY=sk-or-v1-..."
@@ -88,17 +94,25 @@ log "[1/7] apt deps (postgres + pgvector + python + docker)"
 PG_VER="${DUKE_PG_VER:-$(apt-cache search --names-only '^postgresql-[0-9]+$' 2>/dev/null \
           | grep -oE 'postgresql-[0-9]+' | grep -oE '[0-9]+$' | sort -n | tail -1)}"
 PG_VER="${PG_VER:-16}"
-if ! dpkg -l "postgresql-$PG_VER" >/dev/null 2>&1 || ! command -v docker >/dev/null; then
+if ! dpkg -l "postgresql-$PG_VER" >/dev/null 2>&1 || { [ "$HS_MODE" != pip ] && ! command -v docker >/dev/null; }; then
   sudo apt-get update -y
   sudo apt-get install -y \
     "postgresql-$PG_VER" "postgresql-contrib-$PG_VER" \
     python3 python3-venv python3-pip build-essential libpq-dev \
-    docker.io
+    $([ "$HS_MODE" = pip ] || echo docker.io)
   # pgvector is packaged per server version and the name varies by release.
   sudo apt-get install -y "postgresql-$PG_VER-pgvector" 2>/dev/null \
     || sudo apt-get install -y postgresql-pgvector 2>/dev/null \
     || warn "no pgvector package for pg$PG_VER - CREATE EXTENSION vector may fail"
   sudo usermod -aG docker "$USER_NAME" || true
+fi
+# A postgres that was already installed (CI runners, earlier installs) skips the
+# block above, so check pgvector on its own.
+if [ ! -f "/usr/share/postgresql/$PG_VER/extension/vector.control" ]; then
+  sudo apt-get update -y >/dev/null
+  sudo apt-get install -y "postgresql-$PG_VER-pgvector" 2>/dev/null \
+    || sudo apt-get install -y postgresql-pgvector 2>/dev/null \
+    || warn "no pgvector package for pg$PG_VER - CREATE EXTENSION vector may fail"
 fi
 ok "system packages present (postgres $PG_VER)"
 
@@ -143,7 +157,7 @@ if ! pg_up; then
 fi
 ok "postgres answering queries"
 
-if ! sudo docker info >/dev/null 2>&1; then
+if [ "$HS_MODE" != pip ] && ! sudo docker info >/dev/null 2>&1; then
   sudo service docker start >/dev/null 2>&1 \
     || sudo systemctl start docker >/dev/null 2>&1 || true
   for _ in 1 2 3 4 5 6 7 8; do sudo docker info >/dev/null 2>&1 && break; sleep 2; done
@@ -167,7 +181,7 @@ if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$USER_NAM
 fi
 
 sudo -u postgres psql -d "$DB_NAME" -c "CREATE EXTENSION IF NOT EXISTS vector;" >/dev/null
-sudo -u postgres psql -d "$DB_NAME" -f "$PG_DIR/schema.sql" >/dev/null
+sudo -u postgres psql -d "$DB_NAME" >/dev/null < "$PG_DIR/schema.sql"  # stdin: postgres cannot read a 750 home dir
 ok "schema applied (tasks, prospects, pricing_log, project_state)"
 
 # Patch pg_hba.conf to use trust auth for local connections (single-user dev box).
@@ -193,7 +207,9 @@ fi
 # ------------------------------------------------------------------
 log "[3/7] Hindsight container"
 mkdir -p "$HINDSIGHT_DATA"
-if ! sudo docker ps -a --format '{{.Names}}' | grep -q '^duke-hindsight$'; then
+if [ "$HS_MODE" = pip ]; then
+  bash "$PG_DIR/bootstrap-hindsight-pip.sh" || exit 1
+elif ! sudo docker ps -a --format '{{.Names}}' | grep -q '^duke-hindsight$'; then
   sudo docker pull "$HINDSIGHT_IMAGE"
   sudo docker run -d \
     --name duke-hindsight \
@@ -204,6 +220,9 @@ if ! sudo docker ps -a --format '{{.Names}}' | grep -q '^duke-hindsight$'; then
     -e HINDSIGHT_API_LLM_API_KEY="$HINDSIGHT_API_KEY" \
     -e HINDSIGHT_API_LLM_BASE_URL="$HINDSIGHT_LLM_BASE_URL" \
     -e HINDSIGHT_API_LLM_MODEL="$HINDSIGHT_LLM_MODEL" \
+    --env-file "$PG_DIR/brain-1.2.env" \
+    --env-file "$PG_DIR/brain-model.env" \
+    --shm-size 1g \
     -v "$HINDSIGHT_DATA:/home/hindsight/.pg0" \
     "$HINDSIGHT_IMAGE"
   ok "Hindsight container started (image: $HINDSIGHT_IMAGE)"

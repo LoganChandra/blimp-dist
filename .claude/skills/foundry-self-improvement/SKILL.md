@@ -23,6 +23,8 @@ verified-applied (date + evidence behavior changed, or "unverified")`
 - **SESSION** — every run report: promote real patterns to lessons; amend the affected playbook/skill IN THE SAME SESSION.
 - **ESTATE** — periodic audit: critic samples lessons for an anti-recidivism check (applied/violated per lesson, with file evidence). Lessons applied 3+ times graduate toward constitution; lessons proven wrong are superseded.
 
+**To actually change an agent (skill, prompt, hook), load `self-evolve`:** one delta per lesson, proven by the free gate (`blimp-infra/evolve/gate.sh`) and pass^3 on the touched cases before it merges.
+
 ## Graduation path
 observation (micro-retro) → lesson (evidence attached) → amendment
 (playbook/skill edit) → verified-applied (next occurrence handled right) →

@@ -62,6 +62,9 @@ sys.path.insert(0, str(HERE))
 import facts as factstore          # noqa: E402
 import procedural as procmem       # noqa: E402
 import blackboard as boardstore    # noqa: E402
+import idempotency                  # noqa: E402
+import contract as task_contract    # noqa: E402
+import messagelog                   # noqa: E402
 
 from mcp.server.fastmcp import FastMCP  # noqa: E402
 
@@ -487,9 +490,8 @@ def activity(limit: int = 20) -> str:
 import uuid
 import psycopg
 from psycopg.rows import dict_row
-import httpx
 import subprocess
-import time
+import httpx
 
 SELF_AGENT = os.environ.get("A2A_AGENT_NAME", "duke")  # set by each agent's runtime
 # Push delivery lives in blimp-infra/mesh/ (2026-09-26): a Postgres trigger on
@@ -507,7 +509,8 @@ def _a2a_conn():
 @mcp.tool()
 def a2a_send(to: str, message: str,
              skill: Optional[str] = None,
-             parent_task_id: Optional[str] = None) -> str:
+             parent_task_id: Optional[str] = None,
+             idempotency_key: Optional[str] = None) -> str:
     """
     Send an A2A task to the other agent. Returns the task_id.
 
@@ -517,7 +520,16 @@ def a2a_send(to: str, message: str,
         message: the task description / body.
         skill: optional skill name (e.g. "design-architecture", "ship-pr").
         parent_task_id: if this is a reply to an existing task, its ID.
+        idempotency_key: any unique string for this send (e.g. "review-pr-18"). Calling again with
+            the same key within 24 h returns the first result instead of sending twice. Use it
+            whenever a retry or a resumed session might repeat the send.
     """
+    return idempotency.once(SELF_AGENT, "a2a_send", idempotency_key,
+                            lambda: _a2a_send(to, message, skill, parent_task_id),
+                            args=[to, message, skill, parent_task_id])
+
+
+def _a2a_send(to: str, message: str, skill: Optional[str], parent_task_id: Optional[str]) -> str:
     task_id = parent_task_id or str(uuid.uuid4())
     body = {
         "jsonrpc": "2.0",
@@ -542,6 +554,80 @@ def a2a_send(to: str, message: str,
     # Delivery: the mesh trigger pushes this row to the recipient if they are
     # online (blimp-infra/mesh/); otherwise it waits here for a2a_inbox / brief().
     return json.dumps({"ok": True, "task_id": task_id, "row_id": row["id"]})
+
+
+@mcp.tool()
+def messages(channel: str = "duke", speaker: str = "", limit: int = 20, newest_first: bool = True) -> str:
+    """
+    EXACT Discord messages, in order, from the brain's saved conversations. Use this, never recall(),
+    for "the Nth/last message", "how many times did X say/ask Y", "what exactly did X write" questions:
+    recall() returns summaries that merge messages and cannot count or order them. No model calls.
+
+    Args:
+        channel: Discord channel as captured: "duke", "frank", "hermes", "general", or "dm-<id>".
+        speaker: only this person's/agent's messages (e.g. "Han", "the Boss", "Duke"); empty = everyone.
+        limit: how many to return.
+        newest_first: True = newest first (position_from_newest 1 is the latest).
+
+    Each message carries position_from_newest / position_from_oldest. Say the limits it returns if the
+    question depends on them (minute-resolution times, cut long messages).
+    """
+    try:
+        return json.dumps(messagelog.messages(hc._get, hc._bank_path, channel, speaker, limit, newest_first),
+                          default=str)
+    except Exception as e:
+        return json.dumps({"ok": False, "error": f"messages failed: {e}"})
+
+
+@mcp.tool()
+def a2a_contract(to: str, objective: str, output: str, boundaries: str,
+                 stop_condition: str, check_command: str,
+                 skill: Optional[str] = None,
+                 idempotency_key: Optional[str] = None) -> str:
+    """
+    Hand a task to a peer with the 5-field contract: what to do, what to return, what's off-limits,
+    when to stop, and the command that proves it's done. Use this instead of a bare a2a_send for any
+    real work hand-off; a missing field is refused, because that is how hand-offs usually fail.
+
+    Args:
+        to: "duke", "hermes" or "nanook" (Frank).
+        objective: the one outcome wanted, in a sentence.
+        output: the exact shape to return (e.g. "PR link + test count", "a table of X by Y").
+        boundaries: what not to touch / tools not to use / budget.
+        stop_condition: when to stop, including when to stop and ask instead.
+        check_command: the runnable check that proves it's done (e.g. "pytest blimp-infra/hooks -q").
+        skill / idempotency_key: as in a2a_send.
+    """
+    try:
+        text = task_contract.render(objective=objective, output=output, boundaries=boundaries,
+                                    stop_condition=stop_condition, check_command=check_command)
+    except ValueError as e:
+        return json.dumps({"ok": False, "error": str(e)})
+    return a2a_send(to, text, skill=skill, idempotency_key=idempotency_key)
+
+
+@mcp.tool()
+def reflect(query: str, budget: str = "low") -> str:
+    """
+    Ask the brain to THINK over what it knows and write a reasoned answer with its sources (Hindsight
+    reflect), not just return matching memories like recall(). Use for synthesis: "why did we drop
+    Cohere?", "what's the full history of X?", "what do we know about Y across projects?".
+    Slow (30-60 s) and it costs model tokens (one cheap brain-model call, about 100k input tokens),
+    so use recall() for quick facts and never call this in a loop or on a timer.
+
+    Args:
+        query: the question.
+        budget: "low" (default), "mid" or "high": how hard it searches.
+    """
+    try:
+        resp = httpx.post(hc.HINDSIGHT_URL + hc._bank_path("/reflect"), timeout=240,  # reflect runs 30-60 s
+                          json={"query": query, "budget": budget, "max_tokens": 1200})
+        resp.raise_for_status()
+        r = resp.json()
+    except Exception as e:
+        return json.dumps({"ok": False, "error": f"reflect failed: {e}"})
+    return json.dumps({"ok": True, "answer": r.get("text") or r.get("answer") or "",
+                       "usage": r.get("usage")}, default=str)
 
 
 @mcp.tool()
@@ -652,52 +738,6 @@ def a2a_complete(task_id: str, result: str) -> str:
 
 
 @mcp.tool()
-def delegate_to_orchestrator(task: str,
-                              max_turns: int = 6,
-                              usd_budget: float = 1.00) -> str:
-    """
-    Hand a task off to the LangGraph supervisor for autonomous Hermes/Duke
-    collaboration (Generator-Verifier pattern). Hermes designs, Duke verifies.
-    Use when the Boss asks for something requiring design + delivery, e.g.
-    "have Hermes design X, then ship it" or "build feature Y end-to-end."
-
-    Args:
-        task: the task description (be specific — gets passed to Hermes verbatim).
-        max_turns: max design-verify rounds. Default 6.
-        usd_budget: hard USD cap. Default $1.00.
-
-    Returns:
-        thread_id you can poll via mcp__blimp-brain__orchestrator_status(thread_id).
-    """
-    url = os.environ.get("ORCH_URL", "http://localhost:9092") + "/orchestrate"
-    try:
-        r = httpx.post(url, json={
-            "task": task,
-            "requested_by": SELF_AGENT,
-            "max_turns": max_turns,
-            "usd_budget": usd_budget,
-        }, timeout=10)
-        r.raise_for_status()
-        return json.dumps(r.json())
-    except Exception as e:
-        return json.dumps({"error": f"orchestrator unreachable: {e}"})
-
-
-@mcp.tool()
-def orchestrator_status(thread_id: str) -> str:
-    """Check the status / final result of an orchestrator run."""
-    url = os.environ.get("ORCH_URL", "http://localhost:9092") + f"/orchestrate/{thread_id}"
-    try:
-        r = httpx.get(url, timeout=10)
-        if r.status_code == 404:
-            return json.dumps({"error": "thread not found"})
-        r.raise_for_status()
-        return json.dumps(r.json(), indent=2, default=str)
-    except Exception as e:
-        return json.dumps({"error": f"orchestrator unreachable: {e}"})
-
-
-@mcp.tool()
 def a2a_pushback(task_id: str, reason: str, alternative: Optional[str] = None) -> str:
     """
     Push back on a task — mark it input-required with an explanation.
@@ -726,25 +766,33 @@ _DISCORD_CHANNELS = {
     "duke":      "<ID>",
     "hermes":    "<ID>",
     "general":   "<ID>",
-    "ops":       "<ID>",   # #ops was cut 2026-10-30; alerts go to #frank
+    "alerts":    "<ID>",   # SYSTEM > #alerts (2026-11-06): anything broken goes here
+    "ops":       "<ID>",   # old name for alerts; #ops was cut 2026-10-30
 }
 
 
 @mcp.tool()
-def send_discord(channel: str, message: str) -> str:
+def send_discord(channel: str, message: str, idempotency_key: Optional[str] = None) -> str:
     """
     Post a message to a Discord channel. Works even in restricted (webhook/A2A)
     sessions that have no terminal — this is your proactive Discord-send tool.
 
     Args:
         channel: target channel. One of the aliases
-                 (duke, hermes, general, ops), OR a raw
+                 (duke, hermes, general, alerts), OR a raw
                  channel ID (e.g. "<ID>"), OR "#channel-name".
         message: the text to post.
 
     Returns JSON with ok/true on success. On failure, ok/false plus the
     real error — do NOT claim success if ok is false.
+    idempotency_key: optional unique string; a repeat call with it within 24 h returns the first
+        result (idempotent_replay: true) instead of posting the message again.
     """
+    return idempotency.once(SELF_AGENT, "send_discord", idempotency_key,
+                            lambda: _send_discord(channel, message), args=[channel, message])
+
+
+def _send_discord(channel: str, message: str) -> str:
     key = channel.lower().lstrip("#")
     target = _DISCORD_CHANNELS.get(key, channel)
     to = f"discord:{target}"
@@ -906,14 +954,17 @@ def procedure_list(approved: Optional[bool] = None, limit: int = 100) -> str:
 
 @mcp.tool()
 def board_post(title: str, body: str = "", kind: str = "task",
-               tags: str = "") -> str:
+               tags: str = "", idempotency_key: Optional[str] = None) -> str:
     """
     Post work to the shared team board so ANY agent can self-select it (vs A2A,
     which addresses one named agent). Use for "who can verify/help with X?" —
     kind is task | question | fyi. Check board_list at session start.
+    idempotency_key: optional unique string; a repeat call with it within 24 h returns the first
+    post instead of creating a duplicate.
     """
-    return json.dumps(boardstore.board_post(title, body, kind=kind, tags=tags,
-                                            posted_by=SELF_AGENT), default=str)
+    return idempotency.once(SELF_AGENT, "board_post", idempotency_key, lambda: json.dumps(
+        boardstore.board_post(title, body, kind=kind, tags=tags, posted_by=SELF_AGENT), default=str),
+        args=[title, body, kind, tags])
 
 
 @mcp.tool()

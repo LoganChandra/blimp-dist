@@ -88,6 +88,10 @@ kill_duke_session() {
   fi
   log "KILLING Duke tmux session: $reason"
   tmux kill-session -t duke 2>/dev/null || true
+  # Boot normally resumes Duke's last session. After a runaway kill that would resume the very
+  # transcript that tripped the cap and loop kill/resume forever: agent/launch.sh sees this marker
+  # and starts the next session blank (works for loop, once and cron modes alike).
+  mkdir -p "$HOME/.cache/blimp-agent" && touch "$HOME/.cache/blimp-agent/fresh-duke"
 }
 
 # check_runaway — repeat-call kill + hard token cap, both off the live JSONL

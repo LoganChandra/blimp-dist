@@ -1,0 +1,54 @@
+# Runs the real setup, unattended, on a clean Mac and a clean Ubuntu machine:
+# tools, Postgres with pgvector, the long-term memory answering on /health, the
+# memory tools registered with Claude Code, the Discord files, the doctor. Then it
+# runs setup a second time to prove a re-run is safe.
+# It cannot test the parts that need a person: the Claude login, a real Discord
+# bot, and the Mac's first-run prompts. The keys here are dummies.
+name: setup
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  setup:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 75
+    env:
+      BLIMP_CI: "1"
+      BLIMP_AI: claude
+      BLIMP_NAME: Blimp
+      BLIMP_MEMORY: pip
+      OPENROUTER_API_KEY: sk-or-ci-dummy
+      DISCORD_OWNER_USER_ID: "123456789012345678"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup (first run)
+        run: |
+          export DISCORD_BOT_TOKEN="$(python3 -c "print('C' + 'I' * 25 + '.abcdef.' + 'x' * 30)")"
+          /bin/bash setup.sh
+      - name: Setup again (must be safe and quick)
+        run: |
+          export DISCORD_BOT_TOKEN="$(python3 -c "print('C' + 'I' * 25 + '.abcdef.' + 'x' * 30)")"
+          /bin/bash setup.sh
+      - name: Memory round trip
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          duke-data state-set ci_check '"ok"'
+          duke-data state-get ci_check | grep -q ok
+          curl -fsS http://127.0.0.1:8888/health
+      - name: Doctor report
+        if: always()
+        run: |
+          for p in /opt/homebrew/bin/python3.13 /usr/local/bin/python3.13 python3; do command -v "$p" >/dev/null && break; done
+          "$p" blimp-infra/doctor/doctor.py --lint --skip-human
+      - name: Logs
+        if: failure()
+        run: |
+          tail -n 200 ~/blimp/logs/*.log 2>/dev/null || true

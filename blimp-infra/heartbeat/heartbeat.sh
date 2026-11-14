@@ -137,39 +137,6 @@ parse_registry() {
 # All read-only; each bounded to a few seconds.
 # ------------------------------------------------------------------
 
-check_a2a_broker_health() {
-  curl -fsS -m 5 -o /dev/null http://127.0.0.1:9091/healthz 2>/dev/null \
-    || { echo "a2a-broker not answering on 127.0.0.1:9091/healthz"; return 1; }
-}
-
-check_a2a_stale_tasks() {
-  # /tasks/stale is being added by the a2a-lifecycle work (P0.6) — 404 = not
-  # deployed yet, skip gracefully. Broker-down is a2a-broker-health's job.
-  local resp code body n
-  resp="$(curl -sS -m 5 -w $'\n%{http_code}' http://127.0.0.1:9091/tasks/stale 2>/dev/null)" \
-    || { echo "broker unreachable (covered by a2a-broker-health)"; return 2; }
-  code="${resp##*$'\n'}"
-  body="${resp%$'\n'*}"
-  if [ "$code" = "404" ]; then echo "/tasks/stale not deployed yet"; return 2; fi
-  [ "$code" = "200" ] || { echo "/tasks/stale returned HTTP $code"; return 1; }
-  # A missing jq exits 127 and used to surface as "unparseable JSON" — a tooling
-  # fault wearing a data fault's clothes, which sent 2026-09-02's investigation
-  # at the broker instead of at the host. Name the real cause.
-  command -v jq >/dev/null 2>&1 \
-    || { echo "jq not installed — cannot parse /tasks/stale (host dependency missing, see install-blimp.sh)"; return 1; }
-  n="$(printf '%s' "$body" | jq -r '
-        if type == "array" then length
-        elif (.count? != null) then .count
-        elif (.tasks? != null) then (.tasks | length)
-        else 0 end' 2>/dev/null)" \
-    || { echo "/tasks/stale returned unparseable JSON"; return 1; }
-  if [ "$n" -gt 0 ] 2>/dev/null; then
-    echo "$n stale A2A task(s) — check broker /tasks/stale"
-    return 1
-  fi
-  return 0
-}
-
 check_hindsight_health() {
   curl -fsS -m 5 -o /dev/null http://127.0.0.1:8888/health 2>/dev/null \
     || { echo "hindsight not answering on 127.0.0.1:8888/health"; return 1; }

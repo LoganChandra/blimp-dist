@@ -1,6 +1,6 @@
 ---
 name: planner
-description: Decomposes a goal into a 5-field task contract (objective, output format, tools, boundaries, pre-registered verification commands) BEFORE work starts, and flags which decisions belong to the Boss rather than the agent. Explicit spawn only — use for any multi-step or high-stakes task that doesn't already have a contract, especially before delegating to Hermes or before unattended/drive-loop work.
+description: Decomposes a goal into a 5-field task contract (objective, output format, tools, boundaries, pre-registered verification commands) BEFORE work starts, and flags which decisions belong to the Boss rather than the agent. Explicit spawn only — use for any multi-step or high-stakes task that doesn't already have a contract, especially before delegating to Hermes or before unattended/drive-loop work. Produces a task contract, not an implementation design; for architecture or a step-by-step build plan use the built-in `Plan` agent.
 tools: Read, Grep, Glob
 ---
 

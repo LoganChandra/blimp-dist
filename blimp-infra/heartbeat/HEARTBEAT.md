@@ -43,7 +43,7 @@ honest.
   usefulness is judgment work.
 - **expires** — `YYYY-MM-DD` or `never`. Past-dated rows are **not run**;
   they're flagged as retire-candidates in the digest queue. `never` is
-  reserved for core-infra checks (broker, brain, backups, disk, pulses).
+  reserved for core-infra checks (brain, backups, disk, pulses).
   Demand-driven or experimental items get a date ~90 days out; renew the
   date if the item earns its keep.
 
@@ -67,8 +67,6 @@ pipe-free and the check testable on its own):
 
 | item | check_cmd | threshold | helped_count | harmed_count | expires |
 |---|---|---|---|---|---|
-| a2a-broker-health | builtin:a2a-broker-health | GET 127.0.0.1:9091/healthz answers within 5s | 0 | 0 | never |
-| a2a-stale-tasks | builtin:a2a-stale-tasks | 0 stale tasks from broker /tasks/stale (SKIP while endpoint 404s — P0.6 lifecycle work not deployed yet) | 0 | 0 | 2026-09-30 |
 | hindsight-health | builtin:hindsight-health | GET 127.0.0.1:8888/health answers within 5s (bank duke) | 0 | 0 | never |
 | hermes-webhook-port | builtin:hermes-webhook-port | TCP connect to 127.0.0.1:8644 within 3s | 0 | 0 | never |
 | backup-freshness | builtin:backup-freshness | duke_data-*.sql.gz AND hindsight-*.tar.gz in ~/blimp/backups newer than 26h | 0 | 0 | never |

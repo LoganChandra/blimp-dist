@@ -80,3 +80,8 @@ blimp-infra/postgres/*.bak
 evals/results/
 .vercel
 .env*
+CLAUDE.local.md
+
+# Shipped settings (no secrets)
+!blimp-infra/postgres/brain-*.env
+!.env.example
